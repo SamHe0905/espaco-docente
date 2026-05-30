@@ -8,3 +8,4 @@ sentence-transformers>=3.3
 python-dotenv>=1.0
 PyJWT>=2.9
 passlib[bcrypt]>=1.7
+bcrypt<4.1
