@@ -13,6 +13,7 @@ import {
 import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Field";
 import { Badge } from "../components/ui/Badge";
+import { QuestaoContent } from "../components/QuestaoContent";
 import { api, ApiError } from "../lib/api";
 import {
   copiarQuestoesParaClipboard,
@@ -308,6 +309,23 @@ export function QuestoesScreen({ onVoltar }: Props) {
   );
 }
 
+function RelevanciaBadge({ sim }: { sim: number }) {
+  const pct = Math.round(sim * 100);
+  let cor = "text-neutral-400";
+  let label = `relevância ${pct}%`;
+  if (sim >= 0.7) {
+    cor = "text-emerald-600";
+    label = `relevância ${pct}% • alta`;
+  } else if (sim >= 0.55) {
+    cor = "text-brand-600";
+    label = `relevância ${pct}% • média`;
+  } else if (sim >= 0.45) {
+    cor = "text-amber-600";
+    label = `relevância ${pct}% • baixa`;
+  }
+  return <span className={`ml-auto text-xs font-medium ${cor}`}>{label}</span>;
+}
+
 function QuestaoCard({
   q,
   revelado,
@@ -351,18 +369,18 @@ function QuestaoCard({
         <Badge tone="neutral">Questão {q.numero}</Badge>
         {q.disciplina && <Badge tone="info">{q.disciplina}</Badge>}
         {q.idioma && <Badge tone="neutral">Idioma: {q.idioma}</Badge>}
-        <span className="ml-auto text-xs text-neutral-400">
-          relevância {(q.similarity * 100).toFixed(0)}%
-        </span>
+        <RelevanciaBadge sim={q.similarity} />
       </header>
 
       {q.contexto && (
-        <div className="mb-3 whitespace-pre-line rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-          {q.contexto}
+        <div className="mb-3 rounded-lg bg-neutral-50 p-3">
+          <QuestaoContent content={q.contexto} />
         </div>
       )}
 
-      <p className="mb-3 text-sm font-medium text-neutral-900">{q.enunciado}</p>
+      <div className="mb-3">
+        <QuestaoContent content={q.enunciado} />
+      </div>
 
       <ol className="space-y-1.5">
         {q.alternativas.map((a) => {
