@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://espacodocente01-api.hf.space/:path*" }
+  ]
+}

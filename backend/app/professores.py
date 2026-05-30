@@ -82,7 +82,6 @@ def professor_atual(
 
 @router.post("/auth/register", response_model=TokenResponse)
 def register(req: RegisterRequest) -> TokenResponse:
-    import traceback
     username = req.username.lower().strip()
     if not RX_USERNAME.match(username):
         raise HTTPException(
@@ -90,49 +89,35 @@ def register(req: RegisterRequest) -> TokenResponse:
             detail="Usuário inválido. Use 3-32 caracteres entre letras minúsculas, números, '_', '.' ou '-'.",
         )
 
-    try:
-        client = get_client()
-        existing = (
-            client.table("professores")
-            .select("id")
-            .eq("username", username)
-            .limit(1)
-            .execute()
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DEBUG check-existing: {type(e).__name__}: {e}\n{traceback.format_exc()}")
+    client = get_client()
+    existing = (
+        client.table("professores")
+        .select("id")
+        .eq("username", username)
+        .limit(1)
+        .execute()
+    )
     if existing.data:
         raise HTTPException(status_code=409, detail="Esse usuário já existe")
 
-    try:
-        senha_hash = hash_senha(req.password)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DEBUG hash_senha: {type(e).__name__}: {e}\n{traceback.format_exc()}")
-
+    senha_hash = hash_senha(req.password)
     nome = (req.nome_exibicao or username).strip()
-    try:
-        inserted = (
-            client.table("professores")
-            .insert({
-                "username": username,
-                "senha_hash": senha_hash,
-                "nome_exibicao": nome,
-            })
-            .execute()
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DEBUG insert: {type(e).__name__}: {e}\n{traceback.format_exc()}")
-
-    try:
-        row = inserted.data[0]
-        prof_out = ProfessorOut(
-            id=row["id"], username=row["username"],
-            nome_exibicao=row.get("nome_exibicao"), ativo=True,
-        )
-        token = criar_token(prof_out.id, prof_out.username)
-        return TokenResponse(token=token, user=prof_out)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DEBUG response-build: {type(e).__name__}: {e} | inserted.data={inserted.data!r}\n{traceback.format_exc()}")
+    inserted = (
+        client.table("professores")
+        .insert({
+            "username": username,
+            "senha_hash": senha_hash,
+            "nome_exibicao": nome,
+        })
+        .execute()
+    )
+    row = inserted.data[0]
+    prof_out = ProfessorOut(
+        id=row["id"], username=row["username"],
+        nome_exibicao=row.get("nome_exibicao"), ativo=True,
+    )
+    token = criar_token(prof_out.id, prof_out.username)
+    return TokenResponse(token=token, user=prof_out)
 
 
 @router.post("/auth/login", response_model=TokenResponse)
