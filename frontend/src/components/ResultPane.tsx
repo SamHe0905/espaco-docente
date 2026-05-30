@@ -154,11 +154,34 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
         )}
       </div>
 
-      <div className="space-y-3">
-        {resultado.aulas.map((a) => {
-          const palavras = a.palavras;
-          // Modo projeto: documento unico, sem pilulas de aula/data/codigo
-          if (modo === "projetos_e_trabalhos") {
+      {/* Plano breve: texto corrido com todas as aulas em sequencia
+          (formato pronto pra copiar no sistema da escola) */}
+      {modo === "plano_de_aula" && resultado.aulas.length > 0 ? (
+        <motion.article
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-neutral-200 bg-white p-5"
+        >
+          <p className="text-sm leading-relaxed text-neutral-800">
+            {resultado.aulas.map((a, i) => {
+              const cabecalho = `Aula ${a.numero} | Habilidade: ${a.codigo_bncc || "—"} | ${formataData(a.data)} | `;
+              return (
+                <span key={a.numero}>
+                  {i > 0 && " "}
+                  <span className="font-medium">{cabecalho}</span>
+                  {a.texto.trim()}
+                  {!a.texto.trim().endsWith(".") ? "." : ""}
+                </span>
+              );
+            })}
+          </p>
+        </motion.article>
+      ) : (
+        <div className="space-y-3">
+          {resultado.aulas.map((a) => {
+            const palavras = a.palavras;
+            // Modo projeto: documento unico, sem pilulas de aula/data/codigo
+            if (modo === "projetos_e_trabalhos") {
             return (
               <motion.article
                 key={a.numero}
@@ -175,28 +198,29 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
               </motion.article>
             );
           }
-          return (
-            <motion.article
-              key={a.numero}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl border border-neutral-200 bg-neutral-50/40 p-4"
-            >
-              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-                <Badge tone="brand">Aula {a.numero}</Badge>
-                {a.codigo_bncc && (
-                  <Badge tone="neutral">{a.codigo_bncc}</Badge>
-                )}
-                <Badge tone="neutral">{formataData(a.data)}</Badge>
-                <Badge tone="neutral">{palavras} palavras</Badge>
-              </div>
-              <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-800">
-                {a.texto}
-              </p>
-            </motion.article>
-          );
-        })}
-      </div>
+            return (
+              <motion.article
+                key={a.numero}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border border-neutral-200 bg-neutral-50/40 p-4"
+              >
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+                  <Badge tone="brand">Aula {a.numero}</Badge>
+                  {a.codigo_bncc && (
+                    <Badge tone="neutral">{a.codigo_bncc}</Badge>
+                  )}
+                  <Badge tone="neutral">{formataData(a.data)}</Badge>
+                  <Badge tone="neutral">{palavras} palavras</Badge>
+                </div>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-800">
+                  {a.texto}
+                </p>
+              </motion.article>
+            );
+          })}
+        </div>
+      )}
 
       {resultado.habilidades_usadas.length > 0 && (
         <details className="mt-6 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
