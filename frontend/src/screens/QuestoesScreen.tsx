@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Field";
 import { Badge } from "../components/ui/Badge";
 import { api, ApiError } from "../lib/api";
+import {
+  copiarQuestoesParaClipboard,
+  exportQuestoesToPDF,
+  exportQuestoesToWord,
+} from "../lib/export";
 import type { QuestaoHit } from "../lib/types";
 
 const AREAS_ENEM = [
@@ -30,12 +35,25 @@ export function QuestoesScreen({ onVoltar }: Props) {
   const [hits, setHits] = useState<QuestaoHit[]>([]);
   const [revelados, setRevelados] = useState<Set<number>>(new Set());
 
+  // selecao acumulativa: persiste atraves de varias buscas
+  const [selecionadasMap, setSelecionadasMap] = useState<Map<number, QuestaoHit>>(
+    new Map(),
+  );
+  const selecionadas = useMemo(
+    () => Array.from(selecionadasMap.values()).sort((a, b) => {
+      if (a.ano !== b.ano) return a.ano - b.ano;
+      return a.numero - b.numero;
+    }),
+    [selecionadasMap],
+  );
+  const [copiado, setCopiado] = useState(false);
+  const [exportando, setExportando] = useState<null | "word" | "pdf">(null);
+
   async function buscar(e?: React.FormEvent) {
     e?.preventDefault();
     if (query.trim().length < 2) return;
     setLoading(true);
     setErro(null);
-    setRevelados(new Set());
     try {
       const r = await api.searchQuestoes({
         query: query.trim(),
@@ -62,6 +80,59 @@ export function QuestoesScreen({ onVoltar }: Props) {
     });
   }
 
+  function toggleSelecao(q: QuestaoHit) {
+    setSelecionadasMap((prev) => {
+      const next = new Map(prev);
+      if (next.has(q.id)) next.delete(q.id);
+      else next.set(q.id, q);
+      return next;
+    });
+  }
+
+  function selecionarTodos() {
+    setSelecionadasMap((prev) => {
+      const next = new Map(prev);
+      hits.forEach((q) => next.set(q.id, q));
+      return next;
+    });
+  }
+
+  function limparSelecao() {
+    setSelecionadasMap(new Map());
+  }
+
+  const tituloExport = query.trim()
+    ? `Lista de Exercícios — ${query.trim()}`
+    : "Lista de Exercícios ENEM";
+
+  async function exportarWord() {
+    if (selecionadas.length === 0) return;
+    setExportando("word");
+    try {
+      await exportQuestoesToWord(selecionadas, { titulo: tituloExport });
+    } finally {
+      setExportando(null);
+    }
+  }
+  function exportarPDF() {
+    if (selecionadas.length === 0) return;
+    setExportando("pdf");
+    try {
+      exportQuestoesToPDF(selecionadas, { titulo: tituloExport });
+    } finally {
+      setExportando(null);
+    }
+  }
+  async function copiar() {
+    if (selecionadas.length === 0) return;
+    await copiarQuestoesParaClipboard(selecionadas, { titulo: tituloExport });
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 1800);
+  }
+
+  const todosSelecionados =
+    hits.length > 0 && hits.every((h) => selecionadasMap.has(h.id));
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 lg:px-6 lg:py-10">
       <header className="mb-6 flex items-start gap-3">
@@ -80,7 +151,8 @@ export function QuestoesScreen({ onVoltar }: Props) {
             Banco de Questões
           </h1>
           <p className="text-xs text-neutral-500">
-            Busca semântica em questões reais de ENEM (2009–2023) por tema.
+            Selecione questões reais de ENEM e exporte como lista de
+            exercícios pronta.
           </p>
         </div>
       </header>
@@ -151,19 +223,66 @@ export function QuestoesScreen({ onVoltar }: Props) {
         </p>
       )}
 
+      {/* Barra de selecao sticky */}
+      {selecionadas.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="sticky top-2 z-10 mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-brand-300 bg-brand-50/90 p-3 shadow-card backdrop-blur"
+        >
+          <span className="text-sm font-semibold text-brand-900">
+            {selecionadas.length} selecionada{selecionadas.length > 1 ? "s" : ""}
+          </span>
+          <Button size="sm" onClick={copiar}>
+            {copiado ? "✓ Copiado!" : "📋 Copiar"}
+          </Button>
+          <Button
+            size="sm"
+            onClick={exportarPDF}
+            loading={exportando === "pdf"}
+          >
+            📄 Baixar PDF
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={exportarWord}
+            loading={exportando === "word"}
+          >
+            📝 Baixar Word
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={limparSelecao}
+            className="ml-auto"
+          >
+            Limpar seleção
+          </Button>
+        </motion.div>
+      )}
+
       {hits.length > 0 && (
         <div className="mt-6 space-y-4">
-          <p className="text-sm text-neutral-600">
-            {hits.length} questão(ões) encontrada(s). Clique em
-            <span className="mx-1 font-medium text-brand-700">Ver gabarito</span>
-            para revelar a resposta.
-          </p>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-600">
+            <span>{hits.length} questão(ões) encontrada(s).</span>
+            <button
+              onClick={todosSelecionados ? limparSelecao : selecionarTodos}
+              className="font-medium text-brand-700 hover:underline"
+            >
+              {todosSelecionados
+                ? "Desmarcar todas"
+                : "Selecionar todas desta busca"}
+            </button>
+          </div>
           {hits.map((q) => (
             <QuestaoCard
               key={q.id}
               q={q}
               revelado={revelados.has(q.id)}
-              onToggle={() => toggleGabarito(q.id)}
+              selecionado={selecionadasMap.has(q.id)}
+              onToggleGabarito={() => toggleGabarito(q.id)}
+              onToggleSelecao={() => toggleSelecao(q)}
             />
           ))}
         </div>
@@ -175,19 +294,40 @@ export function QuestoesScreen({ onVoltar }: Props) {
 function QuestaoCard({
   q,
   revelado,
-  onToggle,
+  selecionado,
+  onToggleGabarito,
+  onToggleSelecao,
 }: {
   q: QuestaoHit;
   revelado: boolean;
-  onToggle: () => void;
+  selecionado: boolean;
+  onToggleGabarito: () => void;
+  onToggleSelecao: () => void;
 }) {
   return (
     <motion.article
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border border-neutral-200 bg-white p-5 shadow-card"
+      className={
+        "rounded-xl border bg-white p-5 shadow-card transition-colors " +
+        (selecionado
+          ? "border-brand-400 ring-2 ring-brand-100"
+          : "border-neutral-200")
+      }
     >
       <header className="mb-3 flex flex-wrap items-center gap-2">
+        <label className="mr-1 inline-flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={selecionado}
+            onChange={onToggleSelecao}
+            className="h-4 w-4 cursor-pointer accent-brand-600"
+            aria-label="Selecionar questão"
+          />
+          <span className="text-xs font-medium text-neutral-600">
+            {selecionado ? "Selecionada" : "Selecionar"}
+          </span>
+        </label>
         <Badge tone="brand">
           {q.vestibular} {q.ano}
         </Badge>
@@ -209,7 +349,8 @@ function QuestaoCard({
 
       <ol className="space-y-1.5">
         {q.alternativas.map((a) => {
-          const isCorrect = revelado && a.letter.toUpperCase() === q.gabarito.toUpperCase();
+          const isCorrect =
+            revelado && a.letter.toUpperCase() === q.gabarito.toUpperCase();
           return (
             <li
               key={a.letter}
@@ -230,7 +371,7 @@ function QuestaoCard({
 
       <div className="mt-3 flex items-center justify-between">
         <button
-          onClick={onToggle}
+          onClick={onToggleGabarito}
           className="text-xs font-medium text-brand-700 hover:underline"
         >
           {revelado ? "Ocultar gabarito" : "Ver gabarito"}
