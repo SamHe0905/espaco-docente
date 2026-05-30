@@ -87,11 +87,17 @@ function reducer(state: FormState, action: Action): FormState {
   switch (action.type) {
     case "set":
       return { ...state, [action.field]: action.value };
-    case "set-extra":
-      return {
+    case "set-extra": {
+      const nextState: FormState = {
         ...state,
         extras: { ...state.extras, [action.key]: action.value },
       };
+      // Roteiro detalhado é sempre 1 aula só: trunca se vier de breve com várias.
+      if (action.key === "_brevidade" && action.value === "detalhado" && state.aulas.length > 1) {
+        nextState.aulas = [state.aulas[0]];
+      }
+      return nextState;
+    }
     case "add-habilidade": {
       if (state.habilidadesSelecionadas.some((h) => h.codigo === action.hit.codigo))
         return state;
@@ -639,41 +645,49 @@ export function WizardScreen({ modo, auth, onVoltar, onPrecisaLogin }: Props) {
           )}
 
           {/* 5. Aulas (datas ou quantidade) — quando aplicavel */}
-          {config.precisaAulasComData && (config.aulasModo ?? "datas") === "datas" && (
-            <StepBlock
-              numero={config.camposExtras.length > 0 ? 5 : 4}
-              titulo={config.rotuloAulasSection}
-              subtitulo={`${config.subtituloAulas} (${state.aulas.length}/5)`}
-            >
-              <div className="space-y-2">
-                {state.aulas.map((a, i) => (
-                  <AulaInputRow
-                    key={i}
-                    numero={i + 1}
-                    aula={a}
-                    onChange={(next) =>
-                      dispatch({ type: "set-aula", index: i, aula: next })
-                    }
-                    onRemove={
-                      state.aulas.length > 1
-                        ? () => dispatch({ type: "remove-aula", index: i })
-                        : undefined
-                    }
-                  />
-                ))}
-              </div>
-              {state.aulas.length < 5 && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => dispatch({ type: "add-aula" })}
-                  className="w-full justify-center"
-                >
-                  + Adicionar {config.rotuloAulasSection.toLowerCase().includes("etapa") ? "etapa" : "aula"}
-                </Button>
-              )}
-            </StepBlock>
-          )}
+          {config.precisaAulasComData && (config.aulasModo ?? "datas") === "datas" && (() => {
+            const isDetalhado =
+              modo === "plano_de_aula" && state.extras._brevidade === "detalhado";
+            return (
+              <StepBlock
+                numero={config.camposExtras.length > 0 ? 5 : 4}
+                titulo={config.rotuloAulasSection}
+                subtitulo={
+                  isDetalhado
+                    ? "uma aula por geração (roteiro detalhado)"
+                    : `${config.subtituloAulas} (${state.aulas.length}/5)`
+                }
+              >
+                <div className="space-y-2">
+                  {state.aulas.map((a, i) => (
+                    <AulaInputRow
+                      key={i}
+                      numero={i + 1}
+                      aula={a}
+                      onChange={(next) =>
+                        dispatch({ type: "set-aula", index: i, aula: next })
+                      }
+                      onRemove={
+                        !isDetalhado && state.aulas.length > 1
+                          ? () => dispatch({ type: "remove-aula", index: i })
+                          : undefined
+                      }
+                    />
+                  ))}
+                </div>
+                {!isDetalhado && state.aulas.length < 5 && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => dispatch({ type: "add-aula" })}
+                    className="w-full justify-center"
+                  >
+                    + Adicionar {config.rotuloAulasSection.toLowerCase().includes("etapa") ? "etapa" : "aula"}
+                  </Button>
+                )}
+              </StepBlock>
+            );
+          })()}
 
           {config.precisaAulasComData && config.aulasModo === "quantidade" && (
             <StepBlock
