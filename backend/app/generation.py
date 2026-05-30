@@ -98,29 +98,28 @@ def parse_llm_output(
 
 
 async def gerar(req: GenerateRequest) -> GenerateResponse:
-    # 1. RAG: busca habilidades relevantes
+    # 1. RAG: monta o contexto curricular
     query = req.tema + (f" {req.foco_especifico}" if req.foco_especifico else "")
 
     hits: list[CurriculumHit] = []
-    # se professor informou codigos, prioriza-os como contexto principal
-    for cod in req.codigos_efetivos():
-        item = get_by_codigo(cod)
-        if item and item.codigo not in {x.codigo for x in hits}:
-            hits.append(item)
+    codigos_solicitados = req.codigos_efetivos()
 
-    # complementa com busca semantica ate ter ate 6 hits
-    faltam = max(0, 6 - len(hits))
-    if faltam > 0:
-        for h in search_curriculum(
-            query, top_k=faltam + 2, etapa=req.etapa, disciplina=req.disciplina
-        ):
-            if h.codigo not in {x.codigo for x in hits}:
-                hits.append(h)
-                if len(hits) >= 6:
-                    break
+    if codigos_solicitados:
+        # Professor selecionou habilidades explicitamente.
+        # Usa APENAS essas, sem enriquecimento por busca semantica.
+        for cod in codigos_solicitados:
+            item = get_by_codigo(cod)
+            if item and item.codigo not in {x.codigo for x in hits}:
+                hits.append(item)
+    else:
+        # Sem habilidades selecionadas: busca semantica por tema/foco
+        hits = search_curriculum(
+            query, top_k=5, etapa=req.etapa, disciplina=req.disciplina
+        )
 
     if not hits:
-        # fallback: sem filtros
+        # ultimo fallback: nem com habilidades nem com busca filtrada,
+        # tenta semantica sem filtros
         hits = search_curriculum(query, top_k=5)
 
     # 2. LLM: gera planejamento
