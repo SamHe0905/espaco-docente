@@ -40,23 +40,43 @@ Aula 1 – EM13CHS502 – 12/06
 A aula abordará os impactos sociais da globalização por meio de exposição dialogada e análise de situações do cotidiano. Os estudantes participarão de discussões em grupo e atividades interpretativas utilizando textos e recursos audiovisuais, desenvolvendo reflexão crítica sobre desigualdade, cultura e transformações econômicas presentes na sociedade contemporânea.
 """,
     # ------------------------------------------------------------------
-    "sugestao_de_aula": """MODO: SUGESTÃO DE AULA (roteiro mais detalhado que o plano de aula).
+    "sugestao_de_aula": """MODO: ROTEIRO DETALHADO DE UMA AULA (planejamento profundo, pronto pra usar).
 
-CORPO de cada aula: 2 a 3 parágrafos curtos (total 100 a 180 palavras) descrevendo:
-- abertura/contextualização
-- desenvolvimento (atividade principal)
-- fechamento (síntese, avaliação informal)
+Este modo NÃO é um plano breve um pouco mais longo. É um ROTEIRO COMPLETO de UMA aula, com profundidade real pra o professor entrar em sala sem precisar planejar mais nada. Foco em UMA aula por vez (se o professor solicitar várias datas, gere um roteiro completo e independente para cada — sem repetir as mesmas ideias em aulas diferentes).
 
-Sem labels nem bullets. Prosa fluida. Pode usar quebras de linha entre os parágrafos.
+CORPO de cada aula: 500 a 900 palavras, estruturado nas SEÇÕES abaixo (use estes títulos em CAIXA ALTA, na ordem, separados por linha em branco). NÃO use bullets nem markdown; use prosa direta dentro de cada seção. Cada seção deve trazer INFORMAÇÃO NOVA e CONCRETA — proibido reformular o que já foi dito.
 
-EXEMPLO:
+Aula X – [CÓDIGO] – DD/MM
 
-Aula 1 – EM13CHS502 – 12/06
-A aula começa com uma roda de conversa retomando exemplos de produtos globais usados no cotidiano dos estudantes, sondando concepções prévias sobre globalização.
+VISÃO GERAL DA AULA
+Um parágrafo de 50 a 80 palavras: o que esta aula entrega ao final, qual a grande pergunta que ela responde, e por que esse recorte importa pro estudante. Sem rodeios, sem palavras vazias.
 
-Em seguida, o professor apresenta um pequeno texto e dois vídeos curtos sobre fluxos econômicos e culturais entre países, conduzindo análise dialogada com mapeamento dos principais conceitos no quadro.
+OBJETIVOS DE APRENDIZAGEM
+3 a 5 objetivos em verbos no infinitivo, derivados da habilidade BNCC desta aula. Um por linha. Cada um deve ser observável (o que o estudante demonstrará saber/fazer).
 
-Para fechar, os estudantes registram em duplas três efeitos da globalização observados localmente, compartilham com a turma e o professor sintetiza coletivamente as ideias centrais.
+MATERIAIS E PREPARAÇÃO PRÉVIA
+Liste APENAS o que é necessário pra esta aula específica. O que o professor precisa providenciar antes (impressos, links, imagens, organização da sala). Considere a realidade da escola pública — sem materiais caros ou difíceis.
+
+SEQUÊNCIA DIDÁTICA (passo a passo com tempo)
+Divida a aula em 4 a 6 MOMENTOS sequenciais. Para cada um indique entre parênteses o tempo aproximado em minutos. Descreva em prosa o que o PROFESSOR faz, o que os ESTUDANTES fazem, e como a transição pro próximo momento acontece. Seja específico: cite a pergunta exata da abertura, o exemplo concreto usado, o comando que o professor dá. NÃO repita conteúdo da Visão Geral. Esta é a parte mais densa do roteiro.
+
+ATIVIDADE CENTRAL — DETALHAMENTO
+Detalhe SÓ a atividade-chave da aula (a que mais demora ou produz a aprendizagem central): enunciado completo que será passado aos estudantes, organização da turma (individual/duplas/grupos), critério de execução, e o que o professor faz enquanto eles trabalham (circulação, intervenções típicas, perguntas mediadoras).
+
+AVALIAÇÃO FORMATIVA
+Como o professor sabe, AINDA NESTA AULA, se os estudantes alcançaram os objetivos. Indique 2 ou 3 evidências observáveis (uma resposta esperada, um registro produzido, uma participação característica) e o que fazer com cada uma. Não é prova ao final do bimestre — é leitura em tempo real.
+
+POSSÍVEIS DIFICULDADES E MEDIAÇÕES
+Antecipe 2 ou 3 obstáculos reais (conceitos que confundem, perfis de estudante que travam, dispersão típica) e descreva a mediação concreta para cada — uma frase prática que o professor pode usar, um ajuste de organização, um exemplo alternativo.
+
+FECHAMENTO E PRÓXIMOS PASSOS
+Como a aula termina (síntese conduzida, registro coletivo, pergunta de saída) e o que conecta com a próxima aula da sequência. Se houver tarefa de casa pertinente, descreva-a aqui em uma frase — sem inventar tarefa por inventar.
+
+REGRAS DURAS DE QUALIDADE:
+- Cada seção traz informação NOVA. É proibido parafrasear o que já foi dito antes.
+- Linguagem operacional, com ações concretas e perguntas/falas exatas — não descrições genéricas tipo "fazer atividade interessante".
+- Considere turma de escola pública (~35 estudantes, recursos limitados).
+- Total da aula: 500 a 900 palavras. Se ficar abaixo de 500 está raso demais; se passar de 900 está prolixo.
 """,
     # ------------------------------------------------------------------
     "lista_de_exercicios": """MODO: LISTA DE EXERCÍCIOS.

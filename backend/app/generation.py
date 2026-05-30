@@ -19,7 +19,7 @@ from .search import get_by_codigo, search_curriculum
 # porque o corpo nao e um paragrafo unico.
 WORD_RANGE_POR_MODO: dict[str, tuple[int, int]] = {
     "plano_de_aula": (40, 60),
-    "sugestao_de_aula": (90, 200),
+    "sugestao_de_aula": (500, 900),
     "recomposicao_paralela": (50, 90),
     "adaptacao_educacao_especial": (55, 110),
     # Sem limite forte: o formato e estruturado, contagem nao se aplica
