@@ -615,10 +615,29 @@ export function WizardScreen({ modo, onVoltar }: Props) {
             )}
           </StepBlock>
 
-          {/* 4. Aulas / Etapas / Configurações */}
-          {config.precisaAulasComData && (config.aulasModo ?? "datas") === "datas" && (
+          {/* 4. Detalhes do material — sempre que houver camposExtras */}
+          {config.camposExtras.length > 0 && (
             <StepBlock
               numero={4}
+              titulo={
+                config.precisaAulasComData
+                  ? "Detalhes do material"
+                  : config.rotuloAulasSection
+              }
+              subtitulo={
+                config.precisaAulasComData
+                  ? "campos específicos deste modo"
+                  : config.subtituloAulas
+              }
+            >
+              {config.camposExtras.map((c) => renderCampoExtra(c))}
+            </StepBlock>
+          )}
+
+          {/* 5. Aulas (datas ou quantidade) — quando aplicavel */}
+          {config.precisaAulasComData && (config.aulasModo ?? "datas") === "datas" && (
+            <StepBlock
+              numero={config.camposExtras.length > 0 ? 5 : 4}
               titulo={config.rotuloAulasSection}
               subtitulo={`${config.subtituloAulas} (${state.aulas.length}/5)`}
             >
@@ -654,7 +673,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
 
           {config.precisaAulasComData && config.aulasModo === "quantidade" && (
             <StepBlock
-              numero={4}
+              numero={config.camposExtras.length > 0 ? 5 : 4}
               titulo={config.rotuloAulasSection}
               subtitulo={config.subtituloAulas}
             >
@@ -708,36 +727,15 @@ export function WizardScreen({ modo, onVoltar }: Props) {
             </StepBlock>
           )}
 
-          {!config.precisaAulasComData &&
-            config.camposExtras.length > 0 && (
-              <StepBlock
-                numero={4}
-                titulo={config.rotuloAulasSection}
-                subtitulo={config.subtituloAulas}
-              >
-                {config.camposExtras.map((c) => renderCampoExtra(c))}
-              </StepBlock>
-            )}
-
-          {/* 5. Campos extras + preferencias (quando ha aulas) */}
-          {(config.precisaAulasComData && config.camposExtras.length > 0) && (
-            <StepBlock
-              numero={5}
-              titulo="Detalhes do material"
-              subtitulo="campos específicos deste modo"
-            >
-              {config.camposExtras.map((c) => renderCampoExtra(c))}
-            </StepBlock>
-          )}
-
           {/* Preferencias gerais (se houver algum campo a mostrar) */}
           {(config.mostrarMetodologia ||
             config.mostrarRecursos ||
             config.mostrarObservacoesTurma) && (
             <StepBlock
               numero={
-                (config.precisaAulasComData ? 5 : 5) +
-                (config.precisaAulasComData && config.camposExtras.length > 0 ? 1 : 0)
+                3 +
+                (config.camposExtras.length > 0 ? 1 : 0) +
+                (config.precisaAulasComData ? 1 : 0)
               }
               titulo="Preferências gerais"
               subtitulo="opcional, mas melhora a qualidade"
