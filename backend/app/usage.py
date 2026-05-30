@@ -1,9 +1,11 @@
-"""Tracker em memoria do uso dos providers LLM.
+"""Tracker persistente do uso dos providers LLM.
 
-Mantem janelas deslizantes de 60s (TPM/RPM) e 24h (TPD/RPD) por provider.
-Nao persiste entre restarts — proposito e dar feedback ao vivo na UI.
+Arquitetura hibrida:
+  - Cache em memoria com janelas deslizantes (60s, 24h) -> snapshot rapido
+  - Persiste cada registro na tabela llm_usage do Supabase
+  - Na inicializacao, carrega ultimas 24h do banco -> sobrevive a restart
 
-Thread-safe via lock simples (FastAPI eh single-process, default uvicorn worker=1).
+Thread-safe via lock simples (FastAPI single-process).
 """
 from __future__ import annotations
 
@@ -11,9 +13,9 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 
-# Limites conhecidos de free tier por provider.
-# Pode ser sobrescrito via env futuramente.
+# Limites conhecidos de free tier por provider (atualizar quando providers mudam).
 LIMITS: dict[str, dict[str, int | None]] = {
     "groq": {
         "rpm": 30,
@@ -22,29 +24,26 @@ LIMITS: dict[str, dict[str, int | None]] = {
         "tpd": 100_000,
     },
     "cerebras": {
-        # Conservador — limites variam por modelo (gpt-oss-120b free)
         "rpm": 30,
         "tpm": 60_000,
         "rpd": 14_400,
         "tpd": 1_000_000,
     },
     "gemini": {
-        # Gemini 3.1 Flash Lite free tier (conforme dashboard do usuario)
         "rpm": 15,
         "tpm": 250_000,
         "rpd": 500,
-        "tpd": None,  # gemini geralmente nao tem TPD explicito; deixamos sem
+        "tpd": None,
     },
 }
 
-_WINDOW_MIN = 60.0           # janela TPM/RPM
-_WINDOW_DAY = 24 * 60 * 60.0 # janela TPD/RPD
+_WINDOW_MIN = 60.0
+_WINDOW_DAY = 24 * 60 * 60.0
 
 
 @dataclass
 class _ProviderState:
-    # cada entrada = (timestamp, tokens)
-    minute: deque = field(default_factory=deque)
+    minute: deque = field(default_factory=deque)  # (ts, tokens)
     day: deque = field(default_factory=deque)
 
 
@@ -52,14 +51,74 @@ class UsageTracker:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._state: dict[str, _ProviderState] = {}
+        self._loaded_from_db = False
 
+    # ---------------------------------------------------------------------
+    # Persistencia
+    # ---------------------------------------------------------------------
+    def _ensure_loaded_from_db(self) -> None:
+        """Carrega ultimas 24h da tabela llm_usage pra dentro do cache."""
+        if self._loaded_from_db:
+            return
+        self._loaded_from_db = True  # marca antes pra nao reentrar
+        try:
+            from .supabase_client import get_client
+            client = get_client()
+            since = (
+                datetime.now(timezone.utc) - timedelta(seconds=_WINDOW_DAY)
+            ).isoformat()
+            resp = (
+                client.table("llm_usage")
+                .select("provider, tokens, created_at")
+                .gte("created_at", since)
+                .order("created_at", desc=False)
+                .limit(50_000)
+                .execute()
+            )
+            now = time.time()
+            for row in resp.data or []:
+                ts_str = row["created_at"]
+                if ts_str.endswith("Z"):
+                    ts_str = ts_str.replace("Z", "+00:00")
+                ts = datetime.fromisoformat(ts_str).timestamp()
+                tokens = int(row["tokens"])
+                provider = row["provider"]
+                st = self._state.setdefault(provider, _ProviderState())
+                if ts > now - _WINDOW_MIN:
+                    st.minute.append((ts, tokens))
+                if ts > now - _WINDOW_DAY:
+                    st.day.append((ts, tokens))
+        except Exception as e:
+            print(f"[usage] falha ao carregar do DB: {e}")
+
+    def _persist_async(self, provider: str, tokens: int) -> None:
+        """Grava 1 registro no Supabase em thread separada (fire-and-forget)."""
+        def _job():
+            try:
+                from .supabase_client import get_client
+                client = get_client()
+                client.table("llm_usage").insert({
+                    "provider": provider,
+                    "tokens": tokens,
+                }).execute()
+            except Exception as e:
+                print(f"[usage] falha ao persistir {provider}/{tokens}: {e}")
+
+        threading.Thread(target=_job, daemon=True).start()
+
+    # ---------------------------------------------------------------------
+    # API publica
+    # ---------------------------------------------------------------------
     def record(self, provider: str, tokens: int) -> None:
         now = time.time()
         with self._lock:
+            self._ensure_loaded_from_db()
             st = self._state.setdefault(provider, _ProviderState())
             st.minute.append((now, tokens))
             st.day.append((now, tokens))
             self._cleanup(st, now)
+        # persiste em background pra nao bloquear a resposta
+        self._persist_async(provider, tokens)
 
     def _cleanup(self, st: _ProviderState, now: float) -> None:
         while st.minute and st.minute[0][0] < now - _WINDOW_MIN:
@@ -72,6 +131,7 @@ class UsageTracker:
         now = time.time()
         out: dict = {"providers": {}}
         with self._lock:
+            self._ensure_loaded_from_db()
             providers = set(self._state.keys()) | set(LIMITS.keys())
             for p in sorted(providers):
                 st = self._state.get(p)
