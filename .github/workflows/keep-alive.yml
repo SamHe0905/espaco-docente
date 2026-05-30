@@ -1,0 +1,37 @@
+name: Keep HuggingFace Space alive
+
+# Pinga o backend a cada 12h pra evitar o sleep de 48h sem atividade.
+# Free tier do HF Spaces dorme apos 48h sem requests — esse ping mantem
+# o container quente e o primeiro acesso de usuarios fica sempre rapido.
+#
+# Custo: ~30s de execucao por run × 2 runs/dia × 30 dias = 30min/mes
+# Limite gratuito do GitHub Actions: 2000min/mes em repos privados.
+
+on:
+  schedule:
+    # Roda as 00:00 e 12:00 UTC (21:00 e 09:00 BRT)
+    - cron: "0 */12 * * *"
+  # permite rodar manualmente pelo botao "Run workflow"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping HF Space health endpoint
+        run: |
+          set -e
+          URL="https://espacodocente01-api.hf.space/"
+          echo "Pinging $URL"
+          # -L segue redirect; -m 90 limita a 90s (acomoda cold start do bge-m3)
+          response=$(curl -sL -m 90 -o /tmp/body -w "%{http_code}" "$URL")
+          echo "HTTP status: $response"
+          echo "Body:"
+          cat /tmp/body
+          echo ""
+          # 200 = no ar. 503 = acordando mas vai voltar; aceitavel.
+          if [ "$response" != "200" ] && [ "$response" != "503" ]; then
+            echo "::error::Inesperado: HTTP $response"
+            exit 1
+          fi
