@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from . import motor_pedagogico as motor
 from .schemas import CurriculumHit, GenerateRequest
 
 SYSTEM_BASE = """Você é um assistente pedagógico que ajuda professores da escola pública brasileira.
@@ -211,11 +212,28 @@ def build_messages(req: GenerateRequest, hits: list[CurriculumHit]) -> list[dict
         for h in hits[:5]
     )
 
-    aulas_solicitadas = "\n".join(
-        f"- Aula {i+1}: {a.data.strftime('%d/%m')}"
-        + (f" (observacao: {a.observacoes})" if a.observacoes else "")
-        for i, a in enumerate(req.aulas)
-    )
+    # Motor pedagogico: sorteia metodologia/verbo/estrategia/fase por aula
+    # Pra projetos_e_trabalhos nao faz sentido (e documento unico)
+    if req.modo == "projetos_e_trabalhos":
+        kits = []
+    else:
+        kits = motor.montar_kits_para_plano(
+            n_aulas=len(req.aulas) or 1,
+            disciplina=req.disciplina,
+            etapa=req.etapa,
+        )
+
+    aulas_linhas = []
+    for i, a in enumerate(req.aulas):
+        linha = f"- Aula {i+1}: {a.data.strftime('%d/%m')}"
+        if a.observacoes:
+            linha += f" (observacao: {a.observacoes})"
+        if i < len(kits):
+            kit_txt = motor.kit_para_texto(kits[i])
+            if kit_txt:
+                linha += f"\n    diretrizes pedagogicas: {kit_txt}"
+        aulas_linhas.append(linha)
+    aulas_solicitadas = "\n".join(aulas_linhas)
 
     # codigos a usar nas aulas: lista informada pelo professor (1 ou N)
     # com fallback no top hit do RAG
