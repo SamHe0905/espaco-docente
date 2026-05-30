@@ -35,6 +35,13 @@ LIMITS: dict[str, dict[str, int | None]] = {
         "rpd": 500,
         "tpd": None,
     },
+    "openrouter": {
+        # Modelos :free do OpenRouter — limites bem conservadores
+        "rpm": 20,
+        "tpm": None,
+        "rpd": 50,
+        "tpd": None,
+    },
 }
 
 _WINDOW_MIN = 60.0

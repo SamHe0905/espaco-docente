@@ -22,10 +22,10 @@ class Settings(BaseSettings):
     supabase_service_key: str
 
     # ---- LLM em cadeia ----
-    # Define a ordem dos providers tentados. Ex: "groq,cerebras,gemini"
+    # Define a ordem dos providers tentados. Ex: "groq,cerebras,gemini,openrouter"
     # Quando um da 429 (rate limit), tenta o proximo da fila automaticamente.
     # Pode ser sobrescrito por env LLM_CHAIN.
-    llm_chain: str = "groq,cerebras,gemini"
+    llm_chain: str = "groq,cerebras,gemini,openrouter"
 
     # Cada provider tem chave + modelo proprio (todos opcionais).
     llm_groq_api_key: str | None = None
@@ -37,6 +37,13 @@ class Settings(BaseSettings):
 
     llm_gemini_api_key: str | None = None
     llm_gemini_model: str = "gemini-3.1-flash-lite"
+
+    llm_openrouter_api_key: str | None = None
+    # Modelo free do OpenRouter (Llama 3.3 70B). Outras opcoes free:
+    #   google/gemma-2-9b-it:free
+    #   mistralai/mistral-7b-instruct:free
+    #   nousresearch/hermes-3-llama-3.1-405b:free
+    llm_openrouter_model: str = "meta-llama/llama-3.3-70b-instruct:free"
 
     # --- compat retroativo (deprecated) ---
     # Se llm_chain="groq" e llm_groq_api_key vazia, usa estes:
@@ -62,6 +69,8 @@ class Settings(BaseSettings):
             return (self.llm_cerebras_api_key, self.llm_cerebras_model)
         if p == "gemini":
             return (self.llm_gemini_api_key, self.llm_gemini_model)
+        if p == "openrouter":
+            return (self.llm_openrouter_api_key, self.llm_openrouter_model)
         return (None, "")
 
     # Embeddings

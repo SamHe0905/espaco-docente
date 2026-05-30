@@ -22,9 +22,18 @@ from .usage import tracker as usage_tracker
 
 # URLs OpenAI-compativeis de cada provider
 PROVIDERS_URL = {
-    "groq":     "https://api.groq.com/openai/v1/chat/completions",
-    "cerebras": "https://api.cerebras.ai/v1/chat/completions",
-    "gemini":   "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "groq":       "https://api.groq.com/openai/v1/chat/completions",
+    "cerebras":   "https://api.cerebras.ai/v1/chat/completions",
+    "gemini":     "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "openrouter": "https://openrouter.ai/api/v1/chat/completions",
+}
+
+# Headers extras opcionais por provider (OpenRouter recomenda Referer/Title)
+PROVIDER_EXTRA_HEADERS = {
+    "openrouter": {
+        "HTTP-Referer": "https://espaco-docente.vercel.app",
+        "X-Title": "Espaco Docente",
+    },
 }
 
 
@@ -75,6 +84,7 @@ async def _call_provider(
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
+        **PROVIDER_EXTRA_HEADERS.get(provider, {}),
     }
 
     async with httpx.AsyncClient(timeout=60) as client:
