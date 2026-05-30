@@ -18,6 +18,7 @@ import re
 import httpx
 
 from .config import get_settings
+from .usage import tracker as usage_tracker
 
 # URLs OpenAI-compativeis de cada provider
 PROVIDERS_URL = {
@@ -96,6 +97,14 @@ async def _call_provider(
             raise LLMError(f"{provider}: erro de rede: {e}", kind="network") from e
 
     data = r.json()
+    # registra uso (sucesso) — usa 'total_tokens' se disponivel
+    try:
+        used = (data.get("usage") or {}).get("total_tokens")
+        if isinstance(used, int) and used > 0:
+            usage_tracker.record(provider, used)
+    except Exception:
+        pass
+
     try:
         msg = data["choices"][0]["message"]
     except (KeyError, IndexError) as e:

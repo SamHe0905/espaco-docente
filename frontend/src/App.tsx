@@ -4,6 +4,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { WizardScreen } from "./screens/WizardScreen";
 import { HistoryScreen } from "./screens/HistoryScreen";
 import { QuestoesScreen } from "./screens/QuestoesScreen";
+import { UsageMeter } from "./components/UsageMeter";
 import type { Modo } from "./lib/types";
 
 type View =
@@ -46,6 +47,7 @@ export default function App() {
           )}
         </motion.div>
       </AnimatePresence>
+      <UsageMeter />
     </div>
   );
 }

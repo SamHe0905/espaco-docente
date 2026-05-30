@@ -23,6 +23,7 @@ from .schemas import (
     SearchQuestoesResponse,
 )
 from .search import search_curriculum
+from .usage import tracker as usage_tracker
 
 settings = get_settings()
 
@@ -44,6 +45,12 @@ app.add_middleware(
 @app.get("/")
 def health() -> dict:
     return {"status": "ok", "service": "espaco-docente", "version": app.version}
+
+
+@app.get("/llm-usage")
+def get_llm_usage() -> dict:
+    """Snapshot atual do uso dos providers LLM (TPM/RPM/TPD/RPD)."""
+    return usage_tracker.snapshot()
 
 
 @app.post("/search-bncc", response_model=SearchBNCCResponse)
