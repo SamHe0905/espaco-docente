@@ -159,25 +159,16 @@ export function HomeScreen({
         </motion.button>
       </div>
 
-      {/* Aviso etico */}
-      <footer className="mt-16 rounded-xl border border-neutral-200 bg-white p-5">
-        <p className="text-sm text-neutral-600">
-          <span className="font-semibold text-neutral-900">Sobre o uso.</span>{" "}
-          O Espaço Docente sugere conteúdos pedagógicos com apoio de IA. O
-          professor permanece como mediador principal do processo educativo —
-          sempre revise as sugestões antes de usar em sala.
-        </p>
-        {onAbrirAdmin && (
-          <div className="mt-3 flex justify-end">
-            <button
-              onClick={onAbrirAdmin}
-              className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
-            >
-              Acessar painel administrativo
-            </button>
-          </div>
-        )}
-      </footer>
+      {onAbrirAdmin && (
+        <div className="mt-16 flex justify-end">
+          <button
+            onClick={onAbrirAdmin}
+            className="text-xs text-neutral-400 transition-colors hover:text-neutral-600"
+          >
+            Painel administrativo
+          </button>
+        </div>
+      )}
     </div>
   );
 }
