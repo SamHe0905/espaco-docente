@@ -108,3 +108,40 @@ class GenerateResponse(BaseModel):
         "Sugestão gerada por IA. O professor é responsável pela validação "
         "pedagógica antes do uso em sala de aula."
     )
+
+
+# ---------------------------------------------------------------------------
+# Banco de questoes de vestibular (ENEM)
+# ---------------------------------------------------------------------------
+
+class Alternativa(BaseModel):
+    letter: str
+    text: str
+
+
+class QuestaoHit(BaseModel):
+    id: int
+    vestibular: str
+    ano: int
+    numero: int
+    disciplina: str | None
+    area_enem: str | None
+    idioma: str | None
+    contexto: str | None
+    enunciado: str
+    alternativas: list[Alternativa]
+    gabarito: str
+    imagens: list[str] = Field(default_factory=list)
+    similarity: float
+
+
+class SearchQuestoesRequest(BaseModel):
+    query: str = Field(..., min_length=2, max_length=500)
+    disciplina: str | None = None
+    ano_min: int | None = None
+    ano_max: int | None = None
+    top_k: int = Field(8, ge=1, le=30)
+
+
+class SearchQuestoesResponse(BaseModel):
+    hits: list[QuestaoHit]

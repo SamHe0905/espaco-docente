@@ -3,12 +3,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { HomeScreen } from "./screens/HomeScreen";
 import { WizardScreen } from "./screens/WizardScreen";
 import { HistoryScreen } from "./screens/HistoryScreen";
+import { QuestoesScreen } from "./screens/QuestoesScreen";
 import type { Modo } from "./lib/types";
 
 type View =
   | { kind: "home" }
   | { kind: "wizard"; modo: Modo }
-  | { kind: "history" };
+  | { kind: "history" }
+  | { kind: "questoes" };
 
 export default function App() {
   const [view, setView] = useState<View>({ kind: "home" });
@@ -27,6 +29,7 @@ export default function App() {
             <HomeScreen
               onEscolher={(modo) => setView({ kind: "wizard", modo })}
               onAbrirHistorico={() => setView({ kind: "history" })}
+              onAbrirBancoQuestoes={() => setView({ kind: "questoes" })}
             />
           )}
           {view.kind === "wizard" && (
@@ -37,6 +40,9 @@ export default function App() {
           )}
           {view.kind === "history" && (
             <HistoryScreen onVoltar={() => setView({ kind: "home" })} />
+          )}
+          {view.kind === "questoes" && (
+            <QuestoesScreen onVoltar={() => setView({ kind: "home" })} />
           )}
         </motion.div>
       </AnimatePresence>

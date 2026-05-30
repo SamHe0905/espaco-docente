@@ -7,9 +7,14 @@ import { useEffect, useState } from "react";
 interface Props {
   onEscolher: (modo: Modo) => void;
   onAbrirHistorico: () => void;
+  onAbrirBancoQuestoes: () => void;
 }
 
-export function HomeScreen({ onEscolher, onAbrirHistorico }: Props) {
+export function HomeScreen({
+  onEscolher,
+  onAbrirHistorico,
+  onAbrirBancoQuestoes,
+}: Props) {
   const [qtdHistorico, setQtdHistorico] = useState(0);
   useEffect(() => {
     setQtdHistorico(historico.listar().length);
@@ -79,6 +84,31 @@ export function HomeScreen({ onEscolher, onAbrirHistorico }: Props) {
             </span>
           </motion.button>
         ))}
+
+        {/* Card especial: banco de questoes reais */}
+        <motion.button
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: MODOS.length * 0.04, duration: 0.25 }}
+          whileHover={{ y: -2 }}
+          onClick={onAbrirBancoQuestoes}
+          className="group flex flex-col items-start gap-3 rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5 text-left shadow-card transition-all hover:border-brand-400 hover:shadow-card-hover"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-xl transition-colors group-hover:bg-brand-200">
+            📚
+          </span>
+          <div>
+            <h3 className="text-base font-semibold text-neutral-900">
+              Banco de Questões
+            </h3>
+            <p className="mt-1 text-sm text-neutral-500">
+              Questões reais de ENEM (2009–2023), busca por tema
+            </p>
+          </div>
+          <span className="mt-auto text-xs font-medium text-brand-600 opacity-0 transition-opacity group-hover:opacity-100">
+            Explorar →
+          </span>
+        </motion.button>
       </div>
 
       <footer className="mt-12 rounded-xl border border-neutral-200 bg-neutral-50 p-4">

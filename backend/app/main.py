@@ -13,11 +13,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .generation import gerar
 from .llm import LLMError
+from .questoes import search_questoes
 from .schemas import (
     GenerateRequest,
     GenerateResponse,
     SearchBNCCRequest,
     SearchBNCCResponse,
+    SearchQuestoesRequest,
+    SearchQuestoesResponse,
 )
 from .search import search_curriculum
 
@@ -60,3 +63,15 @@ async def post_generate(req: GenerateRequest) -> GenerateResponse:
         return await gerar(req)
     except LLMError as e:
         raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.post("/search-questoes", response_model=SearchQuestoesResponse)
+def post_search_questoes(req: SearchQuestoesRequest) -> SearchQuestoesResponse:
+    hits = search_questoes(
+        query=req.query,
+        top_k=req.top_k,
+        disciplina=req.disciplina,
+        ano_min=req.ano_min,
+        ano_max=req.ano_max,
+    )
+    return SearchQuestoesResponse(hits=hits)

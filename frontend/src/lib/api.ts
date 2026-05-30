@@ -3,6 +3,8 @@ import type {
   GenerateResponse,
   SearchBNCCRequest,
   SearchBNCCResponse,
+  SearchQuestoesRequest,
+  SearchQuestoesResponse,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
@@ -39,6 +41,9 @@ export const api = {
 
   generate: (req: GenerateRequest) =>
     post<GenerateRequest, GenerateResponse>("/generate", req),
+
+  searchQuestoes: (req: SearchQuestoesRequest) =>
+    post<SearchQuestoesRequest, SearchQuestoesResponse>("/search-questoes", req),
 };
 
 export { ApiError };

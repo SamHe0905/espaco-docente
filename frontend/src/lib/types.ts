@@ -74,3 +74,37 @@ export interface PlanoSalvo {
   request: GenerateRequest;
   response: GenerateResponse;
 }
+
+// Banco de questões de vestibular
+export interface Alternativa {
+  letter: string;
+  text: string;
+}
+
+export interface QuestaoHit {
+  id: number;
+  vestibular: string;
+  ano: number;
+  numero: number;
+  disciplina: string | null;
+  area_enem: string | null;
+  idioma: string | null;
+  contexto: string | null;
+  enunciado: string;
+  alternativas: Alternativa[];
+  gabarito: string;
+  imagens: string[];
+  similarity: number;
+}
+
+export interface SearchQuestoesRequest {
+  query: string;
+  disciplina?: string | null;
+  ano_min?: number | null;
+  ano_max?: number | null;
+  top_k?: number;
+}
+
+export interface SearchQuestoesResponse {
+  hits: QuestaoHit[];
+}
