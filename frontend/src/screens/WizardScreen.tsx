@@ -6,7 +6,14 @@ import { StepBlock } from "../components/ui/StepBlock";
 import { HabilidadeBox } from "../components/HabilidadeBox";
 import { AulaInputRow } from "../components/AulaInput";
 import { ResultPane } from "../components/ResultPane";
-import { DISCIPLINAS, ETAPAS, MODO_BY_ID, SERIES_POR_ETAPA } from "../lib/constants";
+import {
+  DISCIPLINAS,
+  ETAPAS,
+  EXEMPLOS_TEMA_GENERICOS,
+  EXEMPLOS_TEMA_POR_DISCIPLINA,
+  MODO_BY_ID,
+  SERIES_POR_ETAPA,
+} from "../lib/constants";
 import { api, ApiError } from "../lib/api";
 import { historico } from "../lib/storage";
 import type {
@@ -23,8 +30,8 @@ interface FormState {
   disciplina: string;
   tema: string;
   foco_especifico: string;
-  codigo_bncc: string;
-  habilidadeAchada: CurriculumHit | null;
+  codigoBuscaInput: string; // o que o user digitou no campo, antes de "Buscar"
+  habilidadesSelecionadas: CurriculumHit[]; // lista de habilidades selecionadas
   buscandoBNCC: boolean;
   aulas: AulaInputT[];
   metodologia: string;
@@ -36,7 +43,9 @@ interface FormState {
 
 type Action =
   | { type: "set"; field: keyof FormState; value: string }
-  | { type: "set-habilidade"; hit: CurriculumHit | null }
+  | { type: "add-habilidade"; hit: CurriculumHit }
+  | { type: "remove-habilidade"; codigo: string }
+  | { type: "limpar-habilidades" }
   | { type: "set-buscando"; value: boolean }
   | { type: "set-aula"; index: number; aula: AulaInputT }
   | { type: "add-aula" }
@@ -51,8 +60,8 @@ function makeInitialState(): FormState {
     disciplina: "",
     tema: "",
     foco_especifico: "",
-    codigo_bncc: "",
-    habilidadeAchada: null,
+    codigoBuscaInput: "",
+    habilidadesSelecionadas: [],
     buscandoBNCC: false,
     aulas: [{ data: hoje }],
     metodologia: "",
@@ -67,12 +76,24 @@ function reducer(state: FormState, action: Action): FormState {
   switch (action.type) {
     case "set":
       return { ...state, [action.field]: action.value };
-    case "set-habilidade":
+    case "add-habilidade": {
+      if (state.habilidadesSelecionadas.some((h) => h.codigo === action.hit.codigo))
+        return state;
       return {
         ...state,
-        habilidadeAchada: action.hit,
-        codigo_bncc: action.hit?.codigo ?? state.codigo_bncc,
+        habilidadesSelecionadas: [...state.habilidadesSelecionadas, action.hit],
+        codigoBuscaInput: "",
       };
+    }
+    case "remove-habilidade":
+      return {
+        ...state,
+        habilidadesSelecionadas: state.habilidadesSelecionadas.filter(
+          (h) => h.codigo !== action.codigo,
+        ),
+      };
+    case "limpar-habilidades":
+      return { ...state, habilidadesSelecionadas: [] };
     case "set-buscando":
       return { ...state, buscandoBNCC: action.value };
     case "set-aula": {
@@ -120,6 +141,15 @@ export function WizardScreen({ modo, onVoltar }: Props) {
     [state.etapa],
   );
 
+  const exemplosTema = useMemo(
+    () =>
+      state.disciplina
+        ? EXEMPLOS_TEMA_POR_DISCIPLINA[state.disciplina] ||
+          EXEMPLOS_TEMA_GENERICOS
+        : EXEMPLOS_TEMA_GENERICOS,
+    [state.disciplina],
+  );
+
   const podeGerar =
     !!state.etapa &&
     !!state.disciplina &&
@@ -130,20 +160,23 @@ export function WizardScreen({ modo, onVoltar }: Props) {
     (!precisaAdaptacao || state.adaptacao_necessaria.trim().length > 0);
 
   async function buscarBNCC() {
-    if (!state.tema && !state.codigo_bncc) return;
+    const termo = state.codigoBuscaInput.trim() || state.tema.trim();
+    if (!termo) return;
     dispatch({ type: "set-buscando", value: true });
     setErro(null);
     try {
-      const q = state.codigo_bncc || state.tema;
       const r = await api.searchBNCC({
-        query: q,
+        query: termo,
         etapa: state.etapa || null,
         disciplina: state.disciplina || null,
         top_k: 1,
       });
       const hit = r.hits[0] || null;
-      dispatch({ type: "set-habilidade", hit });
-      if (!hit) setErro("Nenhuma habilidade encontrada para o termo.");
+      if (hit) {
+        dispatch({ type: "add-habilidade", hit });
+      } else {
+        setErro("Nenhuma habilidade encontrada para o termo.");
+      }
     } catch (e) {
       setErro(e instanceof ApiError ? e.message : "Falha ao buscar habilidade.");
     } finally {
@@ -162,7 +195,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
       disciplina: state.disciplina,
       tema: state.tema,
       foco_especifico: state.foco_especifico || undefined,
-      codigo_bncc: state.codigo_bncc || undefined,
+      codigos_bncc: state.habilidadesSelecionadas.map((h) => h.codigo),
       aulas: state.aulas,
       metodologia: state.metodologia || undefined,
       recursos: state.recursos || undefined,
@@ -250,14 +283,31 @@ export function WizardScreen({ modo, onVoltar }: Props) {
 
           {/* 2. Tema */}
           <StepBlock numero={2} titulo="Tema / Assunto">
-            <Input
-              label="Tema principal"
-              placeholder="Ex: Globalização"
-              value={state.tema}
-              onChange={(e) =>
-                dispatch({ type: "set", field: "tema", value: e.target.value })
-              }
-            />
+            <div>
+              <Input
+                label="Tema principal"
+                placeholder={`Ex: ${exemplosTema[0]}`}
+                value={state.tema}
+                onChange={(e) =>
+                  dispatch({ type: "set", field: "tema", value: e.target.value })
+                }
+              />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <span className="text-xs text-neutral-500">Exemplos:</span>
+                {exemplosTema.map((ex) => (
+                  <button
+                    key={ex}
+                    type="button"
+                    onClick={() =>
+                      dispatch({ type: "set", field: "tema", value: ex })
+                    }
+                    className="rounded-full border border-neutral-200 bg-white px-2.5 py-0.5 text-xs text-neutral-600 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+                  >
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Input
               label="Foco específico (opcional)"
               hint="Ex: aspectos econômicos, impactos no Brasil…"
@@ -274,17 +324,27 @@ export function WizardScreen({ modo, onVoltar }: Props) {
           </StepBlock>
 
           {/* 3. Habilidade BNCC */}
-          <StepBlock numero={3} titulo="Habilidade BNCC">
+          <StepBlock
+            numero={3}
+            titulo="Habilidade BNCC"
+            subtitulo="você pode adicionar mais de uma"
+          >
             <div className="flex items-end gap-2">
               <Input
-                label="Código da habilidade"
-                hint="Deixe em branco para buscar pelo tema"
-                placeholder="Ex: EM13CHS502"
-                value={state.codigo_bncc}
+                label="Código ou termo"
+                hint="Ex: EM13CHS502 — ou um termo como 'globalização'"
+                placeholder="EM13CHS502"
+                value={state.codigoBuscaInput}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    buscarBNCC();
+                  }
+                }}
                 onChange={(e) =>
                   dispatch({
                     type: "set",
-                    field: "codigo_bncc",
+                    field: "codigoBuscaInput",
                     value: e.target.value,
                   })
                 }
@@ -292,16 +352,39 @@ export function WizardScreen({ modo, onVoltar }: Props) {
               <Button
                 onClick={buscarBNCC}
                 loading={state.buscandoBNCC}
-                disabled={!state.tema && !state.codigo_bncc}
+                disabled={
+                  !state.codigoBuscaInput.trim() && !state.tema.trim()
+                }
               >
-                Buscar
+                {state.habilidadesSelecionadas.length > 0
+                  ? "Adicionar"
+                  : "Buscar"}
               </Button>
             </div>
-            {state.habilidadeAchada && (
-              <HabilidadeBox
-                hit={state.habilidadeAchada}
-                onAlterar={() => dispatch({ type: "set-habilidade", hit: null })}
-              />
+
+            {state.habilidadesSelecionadas.length > 0 && (
+              <div className="space-y-2">
+                {state.habilidadesSelecionadas.map((h) => (
+                  <HabilidadeBox
+                    key={h.codigo}
+                    hit={h}
+                    onAlterar={() =>
+                      dispatch({
+                        type: "remove-habilidade",
+                        codigo: h.codigo,
+                      })
+                    }
+                  />
+                ))}
+                {state.habilidadesSelecionadas.length > 1 && (
+                  <button
+                    onClick={() => dispatch({ type: "limpar-habilidades" })}
+                    className="text-xs text-neutral-500 hover:text-red-600"
+                  >
+                    Remover todas
+                  </button>
+                )}
+              </div>
             )}
           </StepBlock>
 

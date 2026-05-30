@@ -88,19 +88,22 @@ async def gerar(req: GenerateRequest) -> GenerateResponse:
     query = req.tema + (f" {req.foco_especifico}" if req.foco_especifico else "")
 
     hits: list[CurriculumHit] = []
-    # se professor informou codigo, prioriza-o como contexto principal
-    if req.codigo_bncc:
-        item = get_by_codigo(req.codigo_bncc)
-        if item:
+    # se professor informou codigos, prioriza-os como contexto principal
+    for cod in req.codigos_efetivos():
+        item = get_by_codigo(cod)
+        if item and item.codigo not in {x.codigo for x in hits}:
             hits.append(item)
-    # complementa com busca semantica
-    hits.extend(
-        h for h in search_curriculum(
-            query, top_k=5, etapa=req.etapa, disciplina=req.disciplina
-        )
-        if h.codigo not in {x.codigo for x in hits}
-    )
-    hits = hits[:5]
+
+    # complementa com busca semantica ate ter ate 6 hits
+    faltam = max(0, 6 - len(hits))
+    if faltam > 0:
+        for h in search_curriculum(
+            query, top_k=faltam + 2, etapa=req.etapa, disciplina=req.disciplina
+        ):
+            if h.codigo not in {x.codigo for x in hits}:
+                hits.append(h)
+                if len(hits) >= 6:
+                    break
 
     if not hits:
         # fallback: sem filtros

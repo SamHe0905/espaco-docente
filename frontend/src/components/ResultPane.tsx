@@ -118,6 +118,11 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
       </header>
 
       <div className="flex flex-wrap gap-2 py-4">
+        {(requestUsado.codigos_bncc || []).map((c) => (
+          <Badge tone="brand" key={c}>
+            Habilidade: {c}
+          </Badge>
+        ))}
         {requestUsado.codigo_bncc && (
           <Badge tone="brand">Habilidade: {requestUsado.codigo_bncc}</Badge>
         )}

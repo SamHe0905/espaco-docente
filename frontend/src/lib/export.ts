@@ -35,13 +35,17 @@ function tituloDoc(req: GenerateRequest): string {
 }
 
 function cabecalhoDados(req: GenerateRequest): Array<[string, string]> {
+  const codigos =
+    req.codigos_bncc && req.codigos_bncc.length > 0
+      ? req.codigos_bncc.join(", ")
+      : req.codigo_bncc || "—";
   return [
     ["Etapa", req.etapa],
     ["Série", req.serie || "—"],
     ["Disciplina", req.disciplina],
     ["Tema", req.tema],
     ["Foco específico", req.foco_especifico || "—"],
-    ["Código BNCC", req.codigo_bncc || "—"],
+    [codigos.includes(",") ? "Códigos BNCC" : "Código BNCC", codigos],
   ];
 }
 

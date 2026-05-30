@@ -59,7 +59,10 @@ class GenerateRequest(BaseModel):
     disciplina: str
     tema: str = Field(..., min_length=2)
     foco_especifico: str | None = None
-    codigo_bncc: str | None = None
+    # Lista de codigos BNCC selecionados pelo professor (1 a N).
+    # Aceita string unica (compat) ou lista.
+    codigos_bncc: list[str] = Field(default_factory=list)
+    codigo_bncc: str | None = None  # legado, ainda aceito
     aulas: list[AulaInput] = Field(..., min_length=1, max_length=5)
     metodologia: str | None = None
     recursos: str | None = None
@@ -73,6 +76,19 @@ class GenerateRequest(BaseModel):
         if len(v) > 5:
             raise ValueError("maximo 5 aulas por geracao")
         return v
+
+    def codigos_efetivos(self) -> list[str]:
+        """Retorna a lista final de codigos considerando ambos os campos."""
+        result: list[str] = []
+        for c in self.codigos_bncc:
+            c = c.strip()
+            if c and c not in result:
+                result.append(c)
+        if self.codigo_bncc:
+            c = self.codigo_bncc.strip()
+            if c and c not in result:
+                result.append(c)
+        return result
 
 
 class AulaOutput(BaseModel):

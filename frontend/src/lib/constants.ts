@@ -26,6 +26,72 @@ export const SERIES_POR_ETAPA: Record<string, string[]> = {
   "Ensino Medio": ["1º ano", "2º ano", "3º ano"],
 };
 
+// Exemplos curriculares por disciplina, mostrados como hint no campo Tema.
+// Sempre 3 por disciplina, escolhidos pra serem familiares aos professores
+// brasileiros e cobrirem etapas/anos diferentes.
+export const EXEMPLOS_TEMA_POR_DISCIPLINA: Record<string, string[]> = {
+  "Arte": ["dança brasileira", "música popular", "artes visuais contemporâneas"],
+  "Ciencias": ["célula e organelos", "ecossistemas", "sistema solar"],
+  "Educacao Fisica": [
+    "brincadeiras tradicionais",
+    "esportes coletivos",
+    "ginástica e ritmo",
+  ],
+  "Ensino Religioso": [
+    "diversidade religiosa no Brasil",
+    "valores éticos universais",
+    "ritos e símbolos",
+  ],
+  "Geografia": ["globalização", "urbanização brasileira", "agronegócio e meio ambiente"],
+  "Historia": [
+    "revolução industrial",
+    "ditadura militar no Brasil",
+    "idade média europeia",
+  ],
+  "Lingua Inglesa": [
+    "vocabulary: daily routine",
+    "present perfect tense",
+    "reading comprehension",
+  ],
+  "Lingua Portuguesa": [
+    "interpretação de texto",
+    "gêneros textuais",
+    "narrativa e ponto de vista",
+  ],
+  "Matematica": [
+    "equações do segundo grau",
+    "frações e razões",
+    "geometria plana",
+  ],
+  "Ciencias Humanas e Sociais Aplicadas": [
+    "globalização e desigualdades",
+    "cidadania e direitos humanos",
+    "industrialização e mundo do trabalho",
+  ],
+  "Ciencias da Natureza e suas Tecnologias": [
+    "genética e biotecnologia",
+    "química do cotidiano",
+    "energia e sustentabilidade",
+  ],
+  "Linguagens e suas Tecnologias": [
+    "gêneros digitais",
+    "literatura brasileira contemporânea",
+    "argumentação e mídia",
+  ],
+  "Matematica e suas Tecnologias": [
+    "funções",
+    "estatística e probabilidade",
+    "geometria analítica",
+  ],
+};
+
+// fallback quando ainda nao escolheu disciplina
+export const EXEMPLOS_TEMA_GENERICOS = [
+  "globalização",
+  "interpretação de texto",
+  "ecossistemas",
+];
+
 export const DISCIPLINAS = [
   // Fundamental
   "Arte",

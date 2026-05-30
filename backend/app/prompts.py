@@ -108,8 +108,29 @@ def build_messages(req: GenerateRequest, hits: list[CurriculumHit]) -> list[dict
         for i, a in enumerate(req.aulas)
     )
 
-    # codigo a usar nas aulas: se professor informou, usar; senao, o top hit
-    codigo_referencia = req.codigo_bncc or (hits[0].codigo if hits else "—")
+    # codigos a usar nas aulas: lista informada pelo professor (1 ou N)
+    # com fallback no top hit do RAG
+    codigos_solicitados = req.codigos_efetivos()
+    if not codigos_solicitados and hits:
+        codigos_solicitados = [hits[0].codigo]
+    if not codigos_solicitados:
+        codigos_solicitados = ["—"]
+
+    if len(codigos_solicitados) == 1:
+        codigo_referencia = codigos_solicitados[0]
+        instrucao_codigos = (
+            f"Use SEMPRE o código {codigo_referencia} no cabeçalho de TODAS as aulas."
+        )
+    else:
+        codigo_referencia = codigos_solicitados[0]  # default pra exibicao
+        codigos_str = ", ".join(codigos_solicitados)
+        instrucao_codigos = (
+            f"O professor selecionou MÚLTIPLAS habilidades: {codigos_str}.\n"
+            f"DISTRIBUA-AS pelas aulas conforme a progressão pedagógica natural — "
+            f"cada aula no cabeçalho deve trazer o código que ela melhor trabalha. "
+            f"Você pode repetir um código em mais de uma aula se fizer sentido. "
+            f"Use APENAS códigos dessa lista nos cabeçalhos."
+        )
 
     pref_lines = []
     if req.metodologia:
@@ -131,7 +152,10 @@ SÉRIE: {req.serie or '—'}
 DISCIPLINA: {req.disciplina}
 TEMA: {req.tema}
 FOCO ESPECÍFICO: {req.foco_especifico or '—'}
-CÓDIGO BNCC DE REFERÊNCIA: {codigo_referencia}
+CÓDIGO(S) BNCC: {', '.join(codigos_solicitados)}
+
+INSTRUÇÃO SOBRE OS CÓDIGOS:
+{instrucao_codigos}
 
 CONTEXTO CURRICULAR (habilidades relevantes encontradas):
 {contexto_curricular}
@@ -143,7 +167,7 @@ PREFERÊNCIAS PEDAGÓGICAS:
 {preferencias}
 
 Gere agora o planejamento seguindo RIGOROSAMENTE o formato:
-Aula X – {codigo_referencia} – DD/MM
+Aula X – [CÓDIGO DA LISTA] – DD/MM
 [parágrafo único de 40 a 60 palavras]
 
 Responda APENAS com as aulas no formato acima, sem introdução, sem conclusão, sem comentários adicionais.

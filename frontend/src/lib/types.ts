@@ -41,7 +41,8 @@ export interface GenerateRequest {
   disciplina: string;
   tema: string;
   foco_especifico?: string;
-  codigo_bncc?: string;
+  codigos_bncc?: string[];
+  codigo_bncc?: string; // legado (compat)
   aulas: AulaInput[];
   metodologia?: string;
   recursos?: string;
