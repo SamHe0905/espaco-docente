@@ -135,11 +135,11 @@ export function QuestoesScreen({ onVoltar }: Props) {
       setExportando(null);
     }
   }
-  function exportarPDF() {
+  async function exportarPDF() {
     if (selecionadas.length === 0) return;
     setExportando("pdf");
     try {
-      exportQuestoesToPDF(selecionadas, { titulo: tituloExport });
+      await exportQuestoesToPDF(selecionadas, { titulo: tituloExport });
     } finally {
       setExportando(null);
     }

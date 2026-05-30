@@ -68,11 +68,11 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
     }
   }
 
-  function handlePDF() {
+  async function handlePDF() {
     if (!resultado || !requestUsado) return;
     setSalvandoExport("pdf");
     try {
-      exportToPDF(requestUsado, resultado);
+      await exportToPDF(requestUsado, resultado);
     } finally {
       setSalvandoExport(null);
     }

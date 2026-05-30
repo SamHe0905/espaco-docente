@@ -19,6 +19,7 @@ import {
   Packer,
 } from "docx";
 import { saveAs } from "file-saver";
+import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 import type { GenerateResponse, GenerateRequest, QuestaoHit } from "./types";
@@ -179,107 +180,161 @@ export async function exportToWord(
 }
 
 // ---------------------------------------------------------------------------
-// PDF (.pdf)
+// Helpers de PDF (html2canvas + jspdf)
 // ---------------------------------------------------------------------------
 
-export function exportToPDF(req: GenerateRequest, res: GenerateResponse): void {
-  // jsPDF: A4 (210x297mm), margens 30/20/20/30 mm
-  const pdf = new jsPDF({ unit: "mm", format: "a4" });
-  const margemEsq = 30;
-  const margemDir = 20;
-  const margemSup = 30;
-  const margemInf = 20;
-  const larguraUtil = 210 - margemEsq - margemDir;
+/**
+ * Renderiza uma string HTML em um div oculto, fotografa com html2canvas
+ * e empilha em paginas A4 dentro de um PDF, gerando arquivo no final.
+ *
+ * Trade-off: imagem rasterizada em vez de texto vetorial, mas a fidelidade
+ * visual e perfeita em qualquer visualizador (sem problema de fontes
+ * substituidas pelo viewer como acontece com jspdf direto).
+ */
+async function htmlParaPdf(html: string, nomeArquivo: string): Promise<void> {
+  const A4_W_MM = 210;
+  const A4_H_MM = 297;
+  const MARGEM_MM = 0; // o HTML ja tem padding interno; renderizamos canvas cheio
+  const PX_PER_MM = 3.78; // aproximadamente 96dpi
+  const larguraPx = Math.round((A4_W_MM - MARGEM_MM * 2) * PX_PER_MM);
 
-  let y = margemSup;
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "fixed";
+  wrapper.style.left = "-100000px";
+  wrapper.style.top = "0";
+  wrapper.style.width = `${larguraPx}px`;
+  wrapper.style.background = "white";
+  wrapper.innerHTML = html;
+  document.body.appendChild(wrapper);
 
-  const adicionaPagina = () => {
-    pdf.addPage();
-    y = margemSup;
-    rodapeEnumeracao();
-  };
-
-  const checaQuebra = (alturaProxima: number) => {
-    if (y + alturaProxima > 297 - margemInf) adicionaPagina();
-  };
-
-  const rodapeEnumeracao = () => {
-    const total = pdf.getNumberOfPages();
-    pdf.setFont("times", "normal");
-    pdf.setFontSize(10);
-    pdf.text(`${total}`, 210 - margemDir, margemSup - 15, { align: "right" });
-    pdf.setFontSize(9);
-    pdf.setFont("times", "italic");
-    pdf.text(
-      "Gerado por Espaço Docente — IA de apoio pedagógico. Revise antes de usar.",
-      105,
-      297 - 10,
-      { align: "center" },
+  try {
+    // Garante que imagens externas (ex: questões ENEM) carreguem antes
+    const imgs = Array.from(wrapper.querySelectorAll("img"));
+    await Promise.all(
+      imgs.map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) return resolve();
+            img.addEventListener("load", () => resolve(), { once: true });
+            img.addEventListener("error", () => resolve(), { once: true });
+          }),
+      ),
     );
-  };
 
-  rodapeEnumeracao();
+    const canvas = await html2canvas(wrapper, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+    });
 
-  // Título
-  pdf.setFont("times", "bold");
-  pdf.setFontSize(16);
-  const titulo = tituloDoc(req);
-  pdf.text(titulo, 105, y, { align: "center", maxWidth: larguraUtil });
-  y += 12;
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const usableW = A4_W_MM - MARGEM_MM * 2;
+    const usableH = A4_H_MM - MARGEM_MM * 2;
+    // Calcula altura proporcional em mm da imagem inteira
+    const totalHeightMm = (canvas.height * usableW) / canvas.width;
 
-  // Dados de cabeçalho
-  pdf.setFontSize(12);
-  for (const [k, v] of cabecalhoDados(req)) {
-    pdf.setFont("times", "bold");
-    pdf.text(`${k}: `, margemEsq, y);
-    const wKey = pdf.getTextWidth(`${k}: `);
-    pdf.setFont("times", "normal");
-    pdf.text(v, margemEsq + wKey, y);
-    y += 7;
-  }
-  y += 5;
+    // Empilha em paginas: cada pagina mostra uma "janela" da imagem
+    let restanteMm = totalHeightMm;
+    let offsetMm = 0;
+    while (restanteMm > 0) {
+      const alturaPaginaMm = Math.min(restanteMm, usableH);
+      // Recorta a parte correspondente
+      const yPx = Math.round((offsetMm / totalHeightMm) * canvas.height);
+      const hPx = Math.round((alturaPaginaMm / totalHeightMm) * canvas.height);
 
-  // Aulas
-  for (const a of res.aulas) {
-    checaQuebra(20);
-    pdf.setFont("times", "bold");
-    pdf.setFontSize(12);
-    pdf.text(
-      `Aula ${a.numero} — ${a.codigo_bncc || "—"} — ${formataData(a.data)}`,
-      margemEsq,
-      y,
-    );
-    y += 7;
-    pdf.setFont("times", "normal");
-    // Preserva quebras de linha do texto original (importante pra exercicios/projetos)
-    const blocos = a.texto.split(/\n/);
-    for (const bloco of blocos) {
-      if (!bloco.trim()) {
-        y += 4;
-        continue;
+      const slice = document.createElement("canvas");
+      slice.width = canvas.width;
+      slice.height = hPx;
+      const ctx = slice.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(canvas, 0, -yPx);
       }
-      const linhas = pdf.splitTextToSize(bloco, larguraUtil);
-      for (const linha of linhas) {
-        checaQuebra(7);
-        pdf.text(linha, margemEsq, y, {
-          maxWidth: larguraUtil,
-        });
-        y += 7;
-      }
+      const imgData = slice.toDataURL("image/jpeg", 0.92);
+      pdf.addImage(
+        imgData,
+        "JPEG",
+        MARGEM_MM,
+        MARGEM_MM,
+        usableW,
+        alturaPaginaMm,
+      );
+      offsetMm += alturaPaginaMm;
+      restanteMm -= alturaPaginaMm;
+      if (restanteMm > 0) pdf.addPage();
     }
-    y += 4;
-  }
 
-  // Atualiza paginação final em todas
-  const totalPaginas = pdf.getNumberOfPages();
-  for (let i = 1; i <= totalPaginas; i++) {
-    pdf.setPage(i);
-    pdf.setFont("times", "normal");
-    pdf.setFontSize(10);
-    pdf.text(`${i}`, 210 - margemDir, margemSup - 15, { align: "right" });
+    pdf.save(nomeArquivo);
+  } finally {
+    document.body.removeChild(wrapper);
   }
+}
 
-  pdf.save(`${slug(titulo)}.pdf`);
+const ESTILOS_BASE = `
+  font-family: "Times New Roman", Times, "Liberation Serif", serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #111;
+  padding: 30mm 20mm 25mm 30mm;
+  box-sizing: border-box;
+  word-wrap: break-word;
+`;
+
+function escapeHtml(s: string): string {
+  return (s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// ---------------------------------------------------------------------------
+// PDF (planos) — html2canvas
+// ---------------------------------------------------------------------------
+
+export async function exportToPDF(
+  req: GenerateRequest,
+  res: GenerateResponse,
+): Promise<void> {
+  const titulo = tituloDoc(req);
+  const dadosHtml = cabecalhoDados(req)
+    .map(
+      ([k, v]) =>
+        `<p style="margin: 0 0 4pt 0;"><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</p>`,
+    )
+    .join("");
+
+  const aulasHtml = res.aulas
+    .map((a) => {
+      const cabecalho = `Aula ${a.numero} — ${a.codigo_bncc || "—"} — ${formataData(a.data)}`;
+      // preserva linhas vazias como pular paragrafo, mantem listas/cabecalhos
+      const blocos = a.texto.split(/\n/).map((linha) => {
+        if (!linha.trim()) return "<div style='height: 6pt;'></div>";
+        return `<p style="margin: 0 0 4pt 0; text-align: justify; text-indent: 1.25cm;">${escapeHtml(linha)}</p>`;
+      });
+      return `
+        <section style="margin-top: 12pt; page-break-inside: avoid;">
+          <h2 style="font-size: 12pt; font-weight: bold; margin: 0 0 6pt 0;">${escapeHtml(cabecalho)}</h2>
+          ${blocos.join("")}
+        </section>
+      `;
+    })
+    .join("");
+
+  const html = `
+    <article style="${ESTILOS_BASE}">
+      <header style="text-align: center; margin-bottom: 14pt;">
+        <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 2pt 0;">${escapeHtml(titulo)}</h1>
+        <p style="font-size: 10pt; font-style: italic; color: #555; margin: 0;">Espaço Docente — IA de apoio pedagógico</p>
+      </header>
+      <div style="margin-bottom: 10pt;">${dadosHtml}</div>
+      ${aulasHtml}
+      <footer style="margin-top: 24pt; padding-top: 8pt; border-top: 1px solid #999; font-size: 9pt; font-style: italic; color: #555; text-align: center;">
+        Sugestão gerada por IA. O professor é responsável pela validação pedagógica antes do uso em sala.
+      </footer>
+    </article>
+  `;
+
+  await htmlParaPdf(html, `${slug(titulo)}.pdf`);
 }
 
 // ---------------------------------------------------------------------------
@@ -516,128 +571,91 @@ export async function exportQuestoesToWord(
   saveAs(blob, `${slug(opts.titulo)}.docx`);
 }
 
-export function exportQuestoesToPDF(
+export async function exportQuestoesToPDF(
   questoes: QuestaoHit[],
   opts: QuestoesExportOpts,
-): void {
+): Promise<void> {
   const incluirCtx = opts.incluirContexto !== false;
   const incluirGab = opts.incluirGabarito !== false;
 
-  const pdf = new jsPDF({ unit: "mm", format: "a4" });
-  const margemEsq = 30;
-  const margemDir = 20;
-  const margemSup = 30;
-  const margemInf = 20;
-  const larguraUtil = 210 - margemEsq - margemDir;
-
-  let y = margemSup;
-  const adicionaPagina = () => {
-    pdf.addPage();
-    y = margemSup;
-  };
-  const checaQuebra = (h: number) => {
-    if (y + h > 297 - margemInf) adicionaPagina();
-  };
-  const escreverLinhas = (texto: string, indent = 0) => {
-    const linhas = pdf.splitTextToSize(texto, larguraUtil - indent);
-    for (const l of linhas) {
-      checaQuebra(7);
-      pdf.text(l, margemEsq + indent, y);
-      y += 6.5;
-    }
-  };
-
-  // titulo
-  pdf.setFont("times", "bold");
-  pdf.setFontSize(16);
-  pdf.text(opts.titulo, 105, y, { align: "center", maxWidth: larguraUtil });
-  y += 9;
-  pdf.setFont("times", "italic");
-  pdf.setFontSize(11);
-  pdf.text(`${questoes.length} questão(ões) selecionada(s)`, 105, y, {
-    align: "center",
-  });
-  y += 10;
-
-  questoes.forEach((q, idx) => {
-    checaQuebra(20);
-    const numero = idx + 1;
-    pdf.setFont("times", "bold");
-    pdf.setFontSize(12);
-    pdf.text(`Questão ${numero}.`, margemEsq, y);
-    pdf.setFont("times", "italic");
-    pdf.text(`  (${fonteCurta(q)})`, margemEsq + 22, y);
-    y += 7;
-
-    pdf.setFont("times", "normal");
-    if (incluirCtx && q.contexto) {
-      for (const linha of q.contexto.split(/\n/)) {
-        if (!linha.trim()) {
-          y += 3;
-          continue;
-        }
-        escreverLinhas(linha);
+  // Limpa markdown de imagem do texto, mas mantem texto envolvente
+  const RX_IMG = /!\[(.*?)\]\((.+?)\)/g;
+  const isBroken = (u: string) => /broken-?image/i.test(u);
+  const txtComImgs = (s: string): string => {
+    let out = "";
+    let last = 0;
+    for (const m of s.matchAll(RX_IMG)) {
+      const idx = m.index ?? 0;
+      out += escapeHtml(s.slice(last, idx));
+      const url = m[2];
+      if (!isBroken(url)) {
+        out += `<div style="text-align:center; margin: 6pt 0;"><img src="${escapeHtml(url)}" style="max-width:100%; max-height: 110mm; object-fit: contain;" crossorigin="anonymous" /></div>`;
+      } else {
+        out += `<p style="font-size: 9pt; font-style: italic; color: #888; margin: 4pt 0;">[imagem original indisponível]</p>`;
       }
-      y += 1;
+      last = idx + m[0].length;
     }
-    pdf.setFont("times", "normal");
-    escreverLinhas(q.enunciado);
-    y += 1;
-    for (const a of q.alternativas) {
-      checaQuebra(7);
-      pdf.setFont("times", "bold");
-      pdf.text(`${a.letter}) `, margemEsq, y);
-      pdf.setFont("times", "normal");
-      const linhas = pdf.splitTextToSize(a.text, larguraUtil - 7);
-      for (let i = 0; i < linhas.length; i++) {
-        if (i > 0) checaQuebra(7);
-        pdf.text(linhas[i], margemEsq + 7, y);
-        y += 6;
-      }
-    }
-    y += 4;
-  });
+    out += escapeHtml(s.slice(last));
+    return out;
+  };
 
-  if (incluirGab) {
-    checaQuebra(18);
-    y += 4;
-    pdf.setFont("times", "bold");
-    pdf.setFontSize(13);
-    pdf.text("Gabarito", margemEsq, y);
-    y += 7;
-    pdf.setFont("times", "normal");
-    pdf.setFontSize(12);
-    const gabarito = questoes
-      .map((q, i) => `${i + 1}-${q.gabarito.toUpperCase()}`)
-      .join("  •  ");
-    escreverLinhas(gabarito);
-    y += 4;
-    pdf.setFont("times", "bold");
-    pdf.setFontSize(11);
-    pdf.text("Fontes:", margemEsq, y);
-    y += 6;
-    pdf.setFont("times", "italic");
-    escreverLinhas(questoes.map(fonteCurta).join("; "));
-  }
+  const questoesHtml = questoes
+    .map((q, idx) => {
+      const numero = idx + 1;
+      const contextoHtml =
+        incluirCtx && q.contexto
+          ? `<div style="margin: 4pt 0 6pt 0; padding: 6pt 8pt; background: #fafafa; border-left: 2pt solid #ddd;">${txtComImgs(q.contexto)}</div>`
+          : "";
+      const enunciadoHtml = `<p style="margin: 6pt 0; text-align: justify;">${txtComImgs(q.enunciado)}</p>`;
+      const altsHtml = q.alternativas
+        .map(
+          (a) =>
+            `<p style="margin: 2pt 0 2pt 8pt; text-align: justify;"><strong>${escapeHtml(a.letter)})</strong> ${escapeHtml(a.text)}</p>`,
+        )
+        .join("");
+      return `
+        <section style="margin-top: 12pt; page-break-inside: avoid;">
+          <h2 style="font-size: 12pt; margin: 0 0 4pt 0;">
+            <strong>Questão ${numero}.</strong>
+            <em style="font-weight: normal; color: #555;">  (${escapeHtml(fonteCurta(q))})</em>
+          </h2>
+          ${contextoHtml}
+          ${enunciadoHtml}
+          ${altsHtml}
+        </section>
+      `;
+    })
+    .join("");
 
-  // numeracao
-  const total = pdf.getNumberOfPages();
-  for (let i = 1; i <= total; i++) {
-    pdf.setPage(i);
-    pdf.setFont("times", "normal");
-    pdf.setFontSize(10);
-    pdf.text(`${i}`, 210 - margemDir, margemSup - 15, { align: "right" });
-    pdf.setFont("times", "italic");
-    pdf.setFontSize(9);
-    pdf.text(
-      "Lista compilada via Espaço Docente — questões originais do ENEM (INEP).",
-      105,
-      297 - 10,
-      { align: "center" },
-    );
-  }
+  const gabaritoHtml = incluirGab
+    ? `
+      <section style="margin-top: 28pt; padding-top: 10pt; border-top: 1px solid #999; page-break-inside: avoid;">
+        <h2 style="font-size: 13pt; font-weight: bold; margin: 0 0 6pt 0;">Gabarito</h2>
+        <p style="margin: 0 0 8pt 0;">${questoes
+          .map((q, i) => `<strong>${i + 1}</strong>-${escapeHtml(q.gabarito.toUpperCase())}`)
+          .join("  •  ")}</p>
+        <p style="font-size: 10pt; font-style: italic; color: #555; margin: 4pt 0 0 0;">
+          <strong>Fontes:</strong> ${escapeHtml(questoes.map(fonteCurta).join("; "))}
+        </p>
+      </section>
+    `
+    : "";
 
-  pdf.save(`${slug(opts.titulo)}.pdf`);
+  const html = `
+    <article style="${ESTILOS_BASE}">
+      <header style="text-align: center; margin-bottom: 14pt;">
+        <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 2pt 0;">${escapeHtml(opts.titulo)}</h1>
+        <p style="font-size: 11pt; font-style: italic; color: #555; margin: 0;">${questoes.length} questão(ões) selecionada(s)</p>
+      </header>
+      ${questoesHtml}
+      ${gabaritoHtml}
+      <footer style="margin-top: 24pt; padding-top: 8pt; border-top: 1px solid #999; font-size: 9pt; font-style: italic; color: #555; text-align: center;">
+        Lista compilada via Espaço Docente — questões originais do ENEM/INEP, FUVEST e UNICAMP.
+      </footer>
+    </article>
+  `;
+
+  await htmlParaPdf(html, `${slug(opts.titulo)}.pdf`);
 }
 
 export function copiarQuestoesParaClipboard(
