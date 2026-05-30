@@ -125,7 +125,9 @@ async def gerar(req: GenerateRequest) -> GenerateResponse:
 
     # 2. LLM: gera planejamento
     messages = build_messages(req, hits)
-    raw = await chat(messages, temperature=0.6, max_tokens=2200)
+    # max_tokens generoso porque modelos reasoning (gpt-oss) gastam parte
+    # da janela em pensamento interno
+    raw = await chat(messages, temperature=0.6, max_tokens=4000)
 
     # 3. valida
     # Se recomposicao em modo atividades, usamos a faixa de palavras maior
@@ -139,7 +141,7 @@ async def gerar(req: GenerateRequest) -> GenerateResponse:
     if problemas and aulas:
         retry_msgs = build_retry_message(raw, problemas)
         try:
-            raw2 = await chat(retry_msgs, temperature=0.35, max_tokens=2200)
+            raw2 = await chat(retry_msgs, temperature=0.35, max_tokens=4000)
             aulas2, problemas2 = parse_llm_output(raw2, len(req.aulas), modo_validacao)
             # so substitui se o retry diminuiu problemas
             if len(problemas2) < len(problemas):

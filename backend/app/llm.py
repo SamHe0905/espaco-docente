@@ -97,9 +97,17 @@ async def _call_provider(
 
     data = r.json()
     try:
-        return data["choices"][0]["message"]["content"]
+        msg = data["choices"][0]["message"]
     except (KeyError, IndexError) as e:
         raise LLMError(f"{provider}: resposta inesperada: {data}") from e
+    # gpt-oss e modelos reasoning separam content de reasoning.
+    # Preferimos content; se vazio, usamos reasoning como fallback.
+    content = msg.get("content") or ""
+    if not content:
+        content = msg.get("reasoning") or ""
+    if not content:
+        raise LLMError(f"{provider}: resposta sem conteudo utilizavel: {data}")
+    return content
 
 
 async def chat(
