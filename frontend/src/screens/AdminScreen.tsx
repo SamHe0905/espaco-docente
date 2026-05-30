@@ -5,11 +5,22 @@ import {
   Database,
   Flame,
   LineChart,
+  LogOut,
+  Lock,
   TrendingUp,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Field";
+import {
+  adminHeaders,
+  clearCreds,
+  loadCreds,
+  saveCreds,
+} from "../lib/adminAuth";
+import type { AdminCreds } from "../lib/adminAuth";
 
 interface ProviderStats {
   tokens: number;
@@ -73,18 +84,32 @@ interface Props {
 }
 
 export function AdminScreen({ onVoltar }: Props) {
+  const [creds, setCreds] = useState<AdminCreds | null>(() => loadCreds());
   const [stats, setStats] = useState<Stats | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/admin/stats`)
+    if (!creds) return;
+    setErro(null);
+    fetch(`${API_BASE}/admin/stats`, { headers: adminHeaders(creds) })
       .then((r) => {
+        if (r.status === 401) {
+          // credenciais salvas estao invalidas — limpa e volta pro login
+          clearCreds();
+          setCreds(null);
+          throw new Error("Credenciais inválidas");
+        }
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
       .then((d) => setStats(d))
-      .catch((e) => setErro(String(e)));
-  }, []);
+      .catch((e) => setErro(String(e.message || e)));
+  }, [creds]);
+
+  // Sem credenciais salvas → tela de login
+  if (!creds) {
+    return <LoginScreen onSucesso={setCreds} onVoltar={onVoltar} />;
+  }
 
   if (erro) {
     return (
@@ -92,6 +117,18 @@ export function AdminScreen({ onVoltar }: Props) {
         <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           Não foi possível carregar as estatísticas: {erro}
         </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            clearCreds();
+            setCreds(null);
+          }}
+          icon={<LogOut className="h-4 w-4" />}
+          className="mt-3"
+        >
+          Sair e tentar de novo
+        </Button>
       </div>
     );
   }
@@ -140,7 +177,7 @@ export function AdminScreen({ onVoltar }: Props) {
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
           <LineChart className="h-5 w-5" strokeWidth={2} />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
             Painel administrativo
           </h1>
@@ -149,6 +186,17 @@ export function AdminScreen({ onVoltar }: Props) {
             {new Date(stats.atualizado_em).toLocaleString("pt-BR")}
           </p>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            clearCreds();
+            setCreds(null);
+          }}
+          icon={<LogOut className="h-4 w-4" />}
+        >
+          Sair
+        </Button>
       </header>
 
       {/* Cards de totais */}
@@ -303,6 +351,109 @@ export function AdminScreen({ onVoltar }: Props) {
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+function LoginScreen({
+  onSucesso,
+  onVoltar,
+}: {
+  onSucesso: (c: AdminCreds) => void;
+  onVoltar: () => void;
+}) {
+  const [user, setUser] = useState("");
+  const [password, setPassword] = useState("");
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function entrar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user.trim() || !password) return;
+    setCarregando(true);
+    setErro(null);
+    try {
+      const r = await fetch(`${API_BASE}/admin/check`, {
+        headers: {
+          "X-Admin-User": user.trim(),
+          "X-Admin-Password": password,
+        },
+      });
+      if (r.status === 401) {
+        setErro("Usuário ou senha inválidos");
+        return;
+      }
+      if (!r.ok) {
+        setErro(`Erro ${r.status}`);
+        return;
+      }
+      const creds: AdminCreds = { user: user.trim(), password };
+      saveCreds(creds);
+      onSucesso(creds);
+    } catch (e) {
+      setErro(`Não foi possível conectar: ${(e as Error).message}`);
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-md px-6 py-16">
+      <header className="mb-8 flex items-center gap-3">
+        <button
+          onClick={onVoltar}
+          className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+          aria-label="Voltar"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+          <Lock className="h-5 w-5" strokeWidth={2} />
+        </div>
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
+            Acesso administrativo
+          </h1>
+          <p className="text-sm text-neutral-500">
+            Entre com suas credenciais
+          </p>
+        </div>
+      </header>
+
+      <form
+        onSubmit={entrar}
+        className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-card"
+      >
+        <Input
+          label="Usuário"
+          autoComplete="username"
+          value={user}
+          onChange={(e) => setUser(e.target.value)}
+          autoFocus
+        />
+        <Input
+          label="Senha"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        {erro && (
+          <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+            {erro}
+          </p>
+        )}
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          loading={carregando}
+          disabled={!user.trim() || !password}
+          className="w-full justify-center"
+        >
+          Entrar
+        </Button>
+      </form>
     </div>
   );
 }

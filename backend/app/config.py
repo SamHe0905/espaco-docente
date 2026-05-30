@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     # App
     cors_origins: str = "http://localhost:5173"
 
+    # Credenciais do painel admin (se vazios, painel fica desprotegido)
+    admin_username: str | None = None
+    admin_password: str | None = None
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

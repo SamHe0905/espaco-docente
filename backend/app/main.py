@@ -7,7 +7,7 @@ Endpoints:
 """
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
@@ -38,8 +38,22 @@ app.add_middleware(
     allow_origins=settings.cors_origins_list,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_headers=["*", "X-Admin-User", "X-Admin-Password"],
 )
+
+
+def _check_admin(
+    x_admin_user: str | None,
+    x_admin_password: str | None,
+) -> None:
+    """Valida usuario + senha do painel admin."""
+    expected_user = settings.admin_username
+    expected_pwd = settings.admin_password
+    # Se nenhuma credencial configurada, deixa passar (modo dev/setup)
+    if not expected_user and not expected_pwd:
+        return
+    if x_admin_user != expected_user or x_admin_password != expected_pwd:
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
 
 @app.get("/")
@@ -57,10 +71,24 @@ def get_llm_usage() -> dict:
 
 
 @app.get("/admin/stats")
-def get_admin_stats() -> dict:
+def get_admin_stats(
+    x_admin_user: str | None = Header(default=None, alias="X-Admin-User"),
+    x_admin_password: str | None = Header(default=None, alias="X-Admin-Password"),
+) -> dict:
     """Estatisticas agregadas dos ultimos 30 dias pro dashboard admin."""
+    _check_admin(x_admin_user, x_admin_password)
     from . import admin as admin_mod
     return admin_mod.stats()
+
+
+@app.get("/admin/check")
+def check_admin_password(
+    x_admin_user: str | None = Header(default=None, alias="X-Admin-User"),
+    x_admin_password: str | None = Header(default=None, alias="X-Admin-Password"),
+) -> dict:
+    """Endpoint leve pra validar credenciais sem buscar todas as stats."""
+    _check_admin(x_admin_user, x_admin_password)
+    return {"ok": True, "protegido": bool(settings.admin_password or settings.admin_username)}
 
 
 @app.post("/search-bncc", response_model=SearchBNCCResponse)

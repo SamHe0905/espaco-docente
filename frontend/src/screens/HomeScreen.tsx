@@ -142,12 +142,12 @@ export function HomeScreen({
           sempre revise as sugestões antes de usar em sala.
         </p>
         {onAbrirAdmin && (
-          <div className="mt-3 text-right">
+          <div className="mt-3 flex justify-end">
             <button
               onClick={onAbrirAdmin}
-              className="text-xs font-medium text-neutral-400 transition-colors hover:text-brand-700"
+              className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
             >
-              Painel administrativo
+              Acessar painel administrativo
             </button>
           </div>
         )}
