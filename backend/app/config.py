@@ -83,6 +83,10 @@ class Settings(BaseSettings):
     admin_username: str | None = None
     admin_password: str | None = None
 
+    # JWT secret pra tokens de professor (auto-gera fallback se vazio,
+    # mas mude pra producao via secret no Space)
+    jwt_secret: str = "dev-secret-trocar-em-producao-via-env"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

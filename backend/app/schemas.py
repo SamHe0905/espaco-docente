@@ -170,3 +170,63 @@ class SearchQuestoesRequest(BaseModel):
 
 class SearchQuestoesResponse(BaseModel):
     hits: list[QuestaoHit]
+
+
+# ---------------------------------------------------------------------------
+# Autenticacao de professores
+# ---------------------------------------------------------------------------
+
+class RegisterRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=32)
+    password: str = Field(..., min_length=6, max_length=128)
+    nome_exibicao: str | None = Field(default=None, max_length=80)
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class ProfessorOut(BaseModel):
+    id: int
+    username: str
+    nome_exibicao: str | None = None
+    ativo: bool = True
+
+
+class TokenResponse(BaseModel):
+    token: str
+    user: ProfessorOut
+
+
+# ---------------------------------------------------------------------------
+# Planos salvos pelo professor
+# ---------------------------------------------------------------------------
+
+class SalvarPlanoRequest(BaseModel):
+    modo: str
+    tema: str | None = None
+    request_json: dict
+    response_json: dict
+
+
+class PlanoSalvoOut(BaseModel):
+    id: int
+    professor_id: int
+    modo: str
+    tema: str | None = None
+    request_json: dict
+    response_json: dict
+    criado_em: str
+
+
+# ---------------------------------------------------------------------------
+# Admin: gerencia de professores
+# ---------------------------------------------------------------------------
+
+class ResetSenhaRequest(BaseModel):
+    nova_senha: str = Field(..., min_length=6, max_length=128)
+
+
+class AtualizarAtivoRequest(BaseModel):
+    ativo: bool

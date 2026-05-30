@@ -92,6 +92,17 @@ export interface PlanoSalvo {
   response: GenerateResponse;
 }
 
+// Plano salvo no perfil do professor (server-side)
+export interface PlanoSalvoServer {
+  id: number;
+  professor_id: number;
+  modo: Modo;
+  tema: string | null;
+  request_json: GenerateRequest;
+  response_json: GenerateResponse;
+  criado_em: string;
+}
+
 // Banco de questões de vestibular
 export interface Alternativa {
   letter: string;

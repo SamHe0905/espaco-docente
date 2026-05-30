@@ -22,6 +22,7 @@ from .schemas import (
     SearchQuestoesRequest,
     SearchQuestoesResponse,
 )
+from .professores import router as professores_router
 from .search import search_curriculum
 from .usage import tracker as usage_tracker
 
@@ -89,6 +90,30 @@ def check_admin_password(
     """Endpoint leve pra validar credenciais sem buscar todas as stats."""
     _check_admin(x_admin_user, x_admin_password)
     return {"ok": True, "protegido": bool(settings.admin_password or settings.admin_username)}
+
+
+# Inclui rotas de auth/perfil/admin-profs
+# Rotas /auth/* e /me/* sao publicas/auth-jwt; rotas /admin/professores/*
+# requerem o header admin via middleware abaixo.
+app.include_router(professores_router)
+
+
+@app.middleware("http")
+async def proteger_admin_profs(request, call_next):
+    """Middleware que exige header X-Admin-* nas rotas /admin/professores/*"""
+    path = request.url.path
+    if path.startswith("/admin/professores"):
+        try:
+            _check_admin(
+                request.headers.get("X-Admin-User"),
+                request.headers.get("X-Admin-Password"),
+            )
+        except HTTPException as e:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=e.status_code, content={"detail": e.detail}
+            )
+    return await call_next(request)
 
 
 @app.post("/search-bncc", response_model=SearchBNCCResponse)

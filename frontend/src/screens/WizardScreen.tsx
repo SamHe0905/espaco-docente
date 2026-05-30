@@ -145,10 +145,12 @@ function reducer(state: FormState, action: Action): FormState {
 
 interface Props {
   modo: Modo;
+  auth?: import("../lib/userAuth").AuthState | null;
   onVoltar: () => void;
+  onPrecisaLogin?: () => void;
 }
 
-export function WizardScreen({ modo, onVoltar }: Props) {
+export function WizardScreen({ modo, auth, onVoltar, onPrecisaLogin }: Props) {
   const modoInfo = MODO_BY_ID[modo];
 
   const [state, dispatch] = useReducer(reducer, undefined, makeInitialState);
@@ -833,7 +835,9 @@ export function WizardScreen({ modo, onVoltar }: Props) {
             resultado={resultado}
             requestUsado={requestUsado}
             gerando={gerando}
+            auth={auth}
             onRegerar={resultado ? () => gerar({ forceRegenerate: true }) : undefined}
+            onPrecisaLogin={onPrecisaLogin}
           />
         </div>
       </div>

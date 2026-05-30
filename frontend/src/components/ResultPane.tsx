@@ -9,8 +9,11 @@ import {
   FileText,
   Loader2,
   RefreshCw,
+  Save,
   Sparkles,
 } from "lucide-react";
+import { api, ApiError } from "../lib/api";
+import type { AuthState } from "../lib/userAuth";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
 import { MODO_BY_ID } from "../lib/constants";
@@ -31,6 +34,8 @@ interface Props {
   requestUsado: GenerateRequest | null;
   gerando: boolean;
   onRegerar?: () => void;
+  auth?: AuthState | null;
+  onPrecisaLogin?: () => void;
 }
 
 function formataData(iso: string): string {
@@ -45,9 +50,38 @@ function calcCargaHoraria(qtd: number, minutosPorAula = 50): string {
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}min`;
 }
 
-export function ResultPane({ modo, resultado, requestUsado, gerando, onRegerar }: Props) {
+export function ResultPane({ modo, resultado, requestUsado, gerando, onRegerar, auth, onPrecisaLogin }: Props) {
   const [copiado, setCopiado] = useState(false);
   const [salvandoExport, setSalvandoExport] = useState<null | "word" | "pdf">(null);
+  const [salvouPerfil, setSalvouPerfil] = useState(false);
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+
+  async function handleSalvarPerfil() {
+    if (!resultado || !requestUsado) return;
+    if (!auth) {
+      onPrecisaLogin?.();
+      return;
+    }
+    setSalvandoPerfil(true);
+    try {
+      await api.salvarPlano(auth.token, {
+        modo: modo,
+        tema: requestUsado.tema || null,
+        request_json: requestUsado,
+        response_json: resultado,
+      });
+      setSalvouPerfil(true);
+      setTimeout(() => setSalvouPerfil(false), 2500);
+    } catch (e) {
+      alert(
+        e instanceof ApiError
+          ? `Erro ao salvar: ${e.message}`
+          : "Não foi possível salvar",
+      );
+    } finally {
+      setSalvandoPerfil(false);
+    }
+  }
 
   if (gerando) return <ResultLoading modo={modo} />;
   if (!resultado || !requestUsado) return <ResultPlaceholder modo={modo} />;
@@ -119,6 +153,16 @@ export function ResultPane({ modo, resultado, requestUsado, gerando, onRegerar }
               Regerar
             </Button>
           )}
+          <Button
+            size="sm"
+            variant={salvouPerfil ? "ghost" : "secondary"}
+            onClick={handleSalvarPerfil}
+            loading={salvandoPerfil}
+            icon={salvouPerfil ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+            title={auth ? "Salvar no meu perfil" : "Entrar pra salvar"}
+          >
+            {salvouPerfil ? "Salvo!" : auth ? "Salvar no perfil" : "Entrar e salvar"}
+          </Button>
           <Button
             size="sm"
             onClick={handleCopiar}

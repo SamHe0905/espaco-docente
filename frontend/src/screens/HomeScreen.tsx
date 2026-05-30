@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight, BookOpen, History } from "lucide-react";
+import { ArrowUpRight, BookOpen, History, LogIn, User } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -8,19 +8,26 @@ import {
 } from "../lib/constants";
 import type { Modo } from "../lib/types";
 import { historico } from "../lib/storage";
+import type { AuthState } from "../lib/userAuth";
 
 interface Props {
+  auth?: AuthState | null;
   onEscolher: (modo: Modo) => void;
   onAbrirHistorico: () => void;
   onAbrirBancoQuestoes: () => void;
   onAbrirAdmin?: () => void;
+  onAbrirLogin?: () => void;
+  onAbrirPerfil?: () => void;
 }
 
 export function HomeScreen({
+  auth,
   onEscolher,
   onAbrirHistorico,
   onAbrirBancoQuestoes,
   onAbrirAdmin,
+  onAbrirLogin,
+  onAbrirPerfil,
 }: Props) {
   const [qtdHistorico, setQtdHistorico] = useState(0);
   useEffect(() => {
@@ -44,18 +51,37 @@ export function HomeScreen({
             </p>
           </div>
         </div>
-        {qtdHistorico > 0 && (
-          <button
-            onClick={onAbrirHistorico}
-            className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50"
-          >
-            <History className="h-4 w-4 text-neutral-500" />
-            Meu histórico
-            <span className="rounded-full bg-neutral-100 px-1.5 text-xs">
-              {qtdHistorico}
-            </span>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {qtdHistorico > 0 && (
+            <button
+              onClick={onAbrirHistorico}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50"
+            >
+              <History className="h-4 w-4 text-neutral-500" />
+              Histórico local
+              <span className="rounded-full bg-neutral-100 px-1.5 text-xs">
+                {qtdHistorico}
+              </span>
+            </button>
+          )}
+          {auth ? (
+            <button
+              onClick={onAbrirPerfil}
+              className="inline-flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-800 transition-colors hover:border-brand-300 hover:bg-brand-100"
+            >
+              <User className="h-4 w-4 text-brand-700" />
+              {auth.user.nome_exibicao || auth.user.username}
+            </button>
+          ) : onAbrirLogin ? (
+            <button
+              onClick={onAbrirLogin}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+            >
+              <LogIn className="h-4 w-4 text-neutral-500" />
+              Entrar
+            </button>
+          ) : null}
+        </div>
       </header>
 
       {/* Hero */}
