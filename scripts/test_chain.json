@@ -1,0 +1,8 @@
+{
+  "modo": "plano_de_aula",
+  "etapa": "Ensino Medio",
+  "disciplina": "Ciencias Humanas e Sociais Aplicadas",
+  "tema": "Globalizacao",
+  "codigos_bncc": ["EM13CHS502"],
+  "aulas": [{"data": "2026-06-12"}]
+}
