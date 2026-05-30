@@ -826,13 +826,15 @@ export function WizardScreen({ modo, onVoltar }: Props) {
           )}
         </div>
 
-        {/* COLUNA DIREITA — RESULTADO */}
-        <ResultPane
-          modo={modo}
-          resultado={resultado}
-          requestUsado={requestUsado}
-          gerando={gerando}
-        />
+        {/* COLUNA DIREITA — RESULTADO (sticky no desktop) */}
+        <div className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          <ResultPane
+            modo={modo}
+            resultado={resultado}
+            requestUsado={requestUsado}
+            gerando={gerando}
+          />
+        </div>
       </div>
     </div>
   );
