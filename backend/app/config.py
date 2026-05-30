@@ -21,10 +21,15 @@ class Settings(BaseSettings):
     supabase_anon_key: str
     supabase_service_key: str
 
-    # LLM
-    llm_provider: str = "groq"
+    # LLM — provider primario
+    llm_provider: str = "groq"  # 'groq' ou 'cerebras'
     llm_model: str = "llama-3.3-70b-versatile"
     llm_api_key: str
+
+    # LLM — provider fallback opcional (usado em caso de rate limit no primario)
+    llm_fallback_provider: str | None = None  # ex 'cerebras'
+    llm_fallback_model: str | None = None     # ex 'llama-3.3-70b'
+    llm_fallback_api_key: str | None = None
 
     # Embeddings
     embedding_model: str = "BAAI/bge-m3"

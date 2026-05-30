@@ -1,15 +1,26 @@
-"""Cliente Groq para inferencia com Llama 3.3.
+"""Cliente LLM com suporte a multiplos providers + fallback automatico.
 
-A Groq tem free tier generoso com latencia ~200ms; ideal pro objetivo de
-"usar no intervalo entre aulas".
+Providers suportados (todos com API compativel OpenAI):
+  - groq:      https://api.groq.com/openai/v1/chat/completions
+  - cerebras:  https://api.cerebras.ai/v1/chat/completions
+
+Comportamento:
+  - chat() tenta o LLM_PROVIDER primario
+  - se receber 429 (rate limit/cota) E houver fallback configurado,
+    re-tenta automaticamente no LLM_FALLBACK_PROVIDER
 """
 from __future__ import annotations
+
+import re
 
 import httpx
 
 from .config import get_settings
 
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+PROVIDERS = {
+    "groq":     "https://api.groq.com/openai/v1/chat/completions",
+    "cerebras": "https://api.cerebras.ai/v1/chat/completions",
+}
 
 
 class LLMError(Exception):
@@ -24,17 +35,32 @@ class LLMRateLimitError(LLMError):
         self.retry_after_seconds = retry_after_seconds
 
 
-async def chat(
+def _parse_retry_after(body_text: str, headers) -> int | None:
+    """Extrai 'try again in 42m21s' ou Retry-After dos headers."""
+    m = re.search(r"in (\d+)m(\d+)", body_text or "")
+    if m:
+        return int(m.group(1)) * 60 + int(m.group(2))
+    h = headers.get("Retry-After") if headers else None
+    if h and h.isdigit():
+        return int(h)
+    return None
+
+
+async def _call_provider(
+    provider: str,
+    model: str,
+    api_key: str,
     messages: list[dict],
-    *,
-    temperature: float = 0.4,
-    max_tokens: int = 2000,
-    response_format: dict | None = None,
+    temperature: float,
+    max_tokens: int,
+    response_format: dict | None,
 ) -> str:
-    """Chama Groq chat completions e retorna o conteudo do assistant."""
-    settings = get_settings()
+    if provider not in PROVIDERS:
+        raise LLMError(f"Provider desconhecido: {provider}")
+    url = PROVIDERS[provider]
+
     payload: dict = {
-        "model": settings.llm_model,
+        "model": model,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
@@ -43,42 +69,85 @@ async def chat(
         payload["response_format"] = response_format
 
     headers = {
-        "Authorization": f"Bearer {settings.llm_api_key}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
 
     async with httpx.AsyncClient(timeout=60) as client:
         try:
-            r = await client.post(GROQ_URL, json=payload, headers=headers)
+            r = await client.post(url, json=payload, headers=headers)
             r.raise_for_status()
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
             body_text = e.response.text or ""
-            # Rate limit / cota -> erro especifico
             if status == 429:
-                retry_after: int | None = None
-                # tenta extrair "Please try again in 42m21.024s" do body
-                import re as _re
-                m = _re.search(r"in (\d+)m(\d+)", body_text)
-                if m:
-                    retry_after = int(m.group(1)) * 60 + int(m.group(2))
-                else:
-                    h = e.response.headers.get("Retry-After")
-                    if h and h.isdigit():
-                        retry_after = int(h)
                 raise LLMRateLimitError(
-                    "Cota da IA esgotada por hoje. Aguarde a renovacao ou ative billing.",
-                    retry_after_seconds=retry_after,
+                    f"{provider}: cota da IA esgotada por enquanto.",
+                    retry_after_seconds=_parse_retry_after(body_text, e.response.headers),
                 ) from e
             raise LLMError(
-                f"Groq {status}: {body_text[:200]}",
+                f"{provider} {status}: {body_text[:200]}",
                 kind="upstream",
             ) from e
         except httpx.HTTPError as e:
-            raise LLMError(f"Erro de rede ao chamar a IA: {e}", kind="network") from e
+            raise LLMError(f"{provider}: erro de rede: {e}", kind="network") from e
 
     data = r.json()
     try:
         return data["choices"][0]["message"]["content"]
     except (KeyError, IndexError) as e:
-        raise LLMError(f"Resposta Groq inesperada: {data}") from e
+        raise LLMError(f"{provider}: resposta inesperada: {data}") from e
+
+
+async def chat(
+    messages: list[dict],
+    *,
+    temperature: float = 0.4,
+    max_tokens: int = 2000,
+    response_format: dict | None = None,
+) -> str:
+    """Tenta provider primario; se 429, tenta fallback (se configurado)."""
+    settings = get_settings()
+
+    try:
+        return await _call_provider(
+            provider=settings.llm_provider,
+            model=settings.llm_model,
+            api_key=settings.llm_api_key,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            response_format=response_format,
+        )
+    except LLMRateLimitError as primary_error:
+        # Se ha fallback configurado, tenta nele
+        if (
+            settings.llm_fallback_provider
+            and settings.llm_fallback_api_key
+            and settings.llm_fallback_model
+        ):
+            try:
+                return await _call_provider(
+                    provider=settings.llm_fallback_provider,
+                    model=settings.llm_fallback_model,
+                    api_key=settings.llm_fallback_api_key,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    response_format=response_format,
+                )
+            except LLMRateLimitError as fallback_error:
+                # Ambos rate-limited
+                retry = (
+                    primary_error.retry_after_seconds
+                    or fallback_error.retry_after_seconds
+                )
+                raise LLMRateLimitError(
+                    "Ambos os provedores de IA estao com cota esgotada agora.",
+                    retry_after_seconds=retry,
+                )
+            except LLMError as fallback_error:
+                # Fallback falhou por outro motivo: reporta o erro primario
+                raise primary_error from fallback_error
+        # sem fallback configurado: propaga o erro primario
+        raise
