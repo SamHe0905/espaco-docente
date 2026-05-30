@@ -1,3 +1,13 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  ClipboardList,
+  Compass,
+  HeartHandshake,
+  Library,
+  NotebookPen,
+  RefreshCw,
+} from "lucide-react";
+
 import type { Modo } from "./types";
 
 export const ETAPAS = [
@@ -114,58 +124,80 @@ export interface ModoInfo {
   id: Modo;
   titulo: string;
   descricao: string;
-  icone: string; // emoji simples; pode trocar por SVG depois
+  icon: LucideIcon;
   ordem: number;
   // campos extras que esse modo precisa
   precisa?: ("lacuna" | "adaptacao")[];
 }
 
+// Banco de Questoes nao e um modo de geracao, mas tem ficha aqui pra reuso
+// de label/icon na home e em cabecalhos.
+export const BANCO_QUESTOES_INFO = {
+  titulo: "Banco de Questões",
+  descricao:
+    "Questões reais do ENEM (2009–2023). Busque, selecione e exporte como lista.",
+  icon: Library,
+};
+
 export const MODOS: ModoInfo[] = [
   {
     id: "plano_de_aula",
-    titulo: "Plano de Aula",
-    descricao: "Texto breve para registro no sistema",
-    icone: "📋",
+    titulo: "Planejamento de Aula",
+    descricao:
+      "Texto breve para registro ou roteiro detalhado para a aula. Escolha a profundidade ao gerar.",
+    icon: NotebookPen,
     ordem: 1,
-  },
-  {
-    id: "sugestao_de_aula",
-    titulo: "Sugestão de Aula",
-    descricao: "Roteiro detalhado com metodologia",
-    icone: "💡",
-    ordem: 2,
   },
   {
     id: "lista_de_exercicios",
     titulo: "Lista de Exercícios",
-    descricao: "Questões por nível com gabarito",
-    icone: "✏️",
-    ordem: 3,
+    descricao:
+      "Questões inéditas geradas por IA, com gabarito e níveis configuráveis.",
+    icon: ClipboardList,
+    ordem: 2,
   },
   {
     id: "projetos_e_trabalhos",
     titulo: "Projetos e Trabalhos",
-    descricao: "Aprendizagem baseada em projetos",
-    icone: "🎯",
-    ordem: 4,
+    descricao:
+      "Aprendizagem baseada em projetos, organizada por etapas e produto final.",
+    icon: Compass,
+    ordem: 3,
   },
   {
     id: "recomposicao_paralela",
     titulo: "Recomposição Paralela",
-    descricao: "Exercícios focados na lacuna do aluno",
-    icone: "🔄",
-    ordem: 5,
+    descricao:
+      "Aulas ou atividades focadas em lacunas de aprendizagem identificadas.",
+    icon: RefreshCw,
+    ordem: 4,
     precisa: ["lacuna"],
   },
   {
     id: "adaptacao_educacao_especial",
-    titulo: "Adaptação Ed. Especial",
-    descricao: "Material adaptado conforme a necessidade",
-    icone: "🤝",
-    ordem: 6,
+    titulo: "Adaptação Especial",
+    descricao:
+      "Material adaptado para necessidades educacionais específicas, com apoios e ritmo próprios.",
+    icon: HeartHandshake,
+    ordem: 5,
     precisa: ["adaptacao"],
   },
+  // sugestao_de_aula e tratado como subtipo do plano_de_aula no frontend,
+  // mas permanece como modo distinto no backend. Mantido aqui pra fallback
+  // quando o backend ou historico antigo referencia o id, mas oculto na home.
+  {
+    id: "sugestao_de_aula",
+    titulo: "Sugestão de Aula",
+    descricao: "Roteiro detalhado da aula com etapas e mediação.",
+    icon: NotebookPen,
+    ordem: 99,
+  },
 ];
+
+// modos exibidos na tela inicial (ordenados, sem o sugestao_de_aula oculto)
+export const MODOS_VISIVEIS = MODOS.filter((m) => m.ordem < 90).sort(
+  (a, b) => a.ordem - b.ordem,
+);
 
 export const MODO_BY_ID = Object.fromEntries(
   MODOS.map((m) => [m.id, m]),
@@ -227,14 +259,35 @@ export function getEffectiveWizardConfig(
 
 export const WIZARD_CONFIG_POR_MODO: Record<Modo, WizardConfig> = {
   plano_de_aula: {
-    tituloAcao: "Gerar plano de aula",
+    tituloAcao: "Gerar planejamento",
     rotuloAulasSection: "Aulas",
     subtituloAulas: "até 5 aulas por vez",
     precisaAulasComData: true,
     mostrarMetodologia: true,
     mostrarRecursos: true,
     mostrarObservacoesTurma: true,
-    camposExtras: [],
+    camposExtras: [
+      {
+        tipo: "radio",
+        key: "_brevidade",
+        label: "Profundidade do planejamento",
+        defaultValue: "breve",
+        options: [
+          {
+            value: "breve",
+            label: "Plano breve",
+            description:
+              "Um parágrafo por aula — ideal para registro rápido no sistema da escola",
+          },
+          {
+            value: "detalhado",
+            label: "Roteiro detalhado",
+            description:
+              "Abertura, desenvolvimento e fechamento por aula — para usar como guia em sala",
+          },
+        ],
+      },
+    ],
   },
   sugestao_de_aula: {
     tituloAcao: "Gerar sugestão de aula",

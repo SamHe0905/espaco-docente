@@ -1,5 +1,15 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import {
+  ArrowLeft,
+  Check,
+  Copy,
+  FileDown,
+  FileText,
+  Library,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Field";
 import { Badge } from "../components/ui/Badge";
@@ -135,24 +145,23 @@ export function QuestoesScreen({ onVoltar }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 lg:px-6 lg:py-10">
-      <header className="mb-6 flex items-start gap-3">
+      <header className="mb-8 flex items-start gap-3">
         <button
           onClick={onVoltar}
-          className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100"
+          className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
           aria-label="Voltar"
         >
-          ←
+          <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-xl">
-          📚
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+          <Library className="h-5 w-5" strokeWidth={2} />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-neutral-900">
+          <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
             Banco de Questões
           </h1>
-          <p className="text-xs text-neutral-500">
-            Selecione questões reais de ENEM e exporte como lista de
-            exercícios pronta.
+          <p className="text-sm text-neutral-500">
+            Busque, selecione e exporte questões reais do ENEM (2009–2023).
           </p>
         </div>
       </header>
@@ -211,6 +220,7 @@ export function QuestoesScreen({ onVoltar }: Props) {
             type="submit"
             loading={loading}
             disabled={query.trim().length < 2}
+            icon={<Search className="h-4 w-4" />}
           >
             Buscar
           </Button>
@@ -233,29 +243,36 @@ export function QuestoesScreen({ onVoltar }: Props) {
           <span className="text-sm font-semibold text-brand-900">
             {selecionadas.length} selecionada{selecionadas.length > 1 ? "s" : ""}
           </span>
-          <Button size="sm" onClick={copiar}>
-            {copiado ? "✓ Copiado!" : "📋 Copiar"}
+          <Button
+            size="sm"
+            onClick={copiar}
+            icon={copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          >
+            {copiado ? "Copiado" : "Copiar"}
           </Button>
           <Button
             size="sm"
             onClick={exportarPDF}
             loading={exportando === "pdf"}
+            icon={<FileDown className="h-4 w-4" />}
           >
-            📄 Baixar PDF
+            PDF
           </Button>
           <Button
             size="sm"
             variant="primary"
             onClick={exportarWord}
             loading={exportando === "word"}
+            icon={<FileText className="h-4 w-4" />}
           >
-            📝 Baixar Word
+            Word
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={limparSelecao}
             className="ml-auto"
+            icon={<Trash2 className="h-4 w-4" />}
           >
             Limpar seleção
           </Button>

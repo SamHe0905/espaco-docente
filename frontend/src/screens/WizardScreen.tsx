@@ -1,5 +1,6 @@
 import { useMemo, useReducer, useState } from "react";
 import { motion } from "framer-motion";
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input, Select, Textarea } from "../components/ui/Field";
 import { RadioGroup } from "../components/ui/RadioGroup";
@@ -234,8 +235,15 @@ export function WizardScreen({ modo, onVoltar }: Props) {
       return Number.isFinite(n) ? n : undefined;
     };
 
+    // No card de Planejamento de Aula, o toggle _brevidade decide qual
+    // modo do backend usar (plano breve vs sugestao detalhada).
+    const modoEfetivo: typeof modo =
+      modo === "plano_de_aula" && state.extras._brevidade === "detalhado"
+        ? "sugestao_de_aula"
+        : modo;
+
     const req: GenerateRequest = {
-      modo,
+      modo: modoEfetivo,
       etapa: state.etapa,
       serie: state.serie || undefined,
       disciplina: state.disciplina,
@@ -360,23 +368,23 @@ export function WizardScreen({ modo, onVoltar }: Props) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 lg:px-6 lg:py-10">
-      <header className="mb-6 flex items-start justify-between gap-4">
+      <header className="mb-8 flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={onVoltar}
-            className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100"
+            className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
             aria-label="Voltar"
           >
-            ←
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-xl">
-            {modoInfo.icone}
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+            <modoInfo.icon className="h-5 w-5" strokeWidth={2} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-neutral-900">
-              Novo {modoInfo.titulo.toLowerCase()}
+            <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
+              {modoInfo.titulo}
             </h1>
-            <p className="text-xs text-neutral-500">
+            <p className="text-sm text-neutral-500">
               {modoInfo.descricao}
             </p>
           </div>
@@ -692,7 +700,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
                 setRequestUsado(null);
                 setErro(null);
               }}
-              icon={<span>↻</span>}
+              icon={<RotateCcw className="h-4 w-4" />}
             >
               Limpar
             </Button>

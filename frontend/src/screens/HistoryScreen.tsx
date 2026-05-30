@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowLeft, Copy, FileDown, FileText, History, Trash2 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { historico } from "../lib/storage";
@@ -24,18 +25,23 @@ export function HistoryScreen({ onVoltar }: Props) {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
-      <header className="mb-6 flex items-center gap-3">
+      <header className="mb-8 flex items-center gap-3">
         <button
           onClick={onVoltar}
-          className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100"
+          className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
           aria-label="Voltar"
         >
-          ←
+          <ArrowLeft className="h-5 w-5" />
         </button>
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+          <History className="h-5 w-5" strokeWidth={2} />
+        </div>
         <div>
-          <h1 className="text-xl font-bold text-neutral-900">Meu histórico</h1>
-          <p className="text-xs text-neutral-500">
-            Salvos no seu navegador. {items.length} item(ns).
+          <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
+            Meu histórico
+          </h1>
+          <p className="text-sm text-neutral-500">
+            Salvos no seu navegador — {items.length} item{items.length === 1 ? "" : "s"}.
           </p>
         </div>
         {items.length > 0 && (
@@ -82,7 +88,7 @@ export function HistoryScreen({ onVoltar }: Props) {
               <div className="mb-2 flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{m.icone}</span>
+                    <m.icon className="h-4 w-4 text-brand-700" strokeWidth={2} />
                     <h3 className="text-sm font-semibold text-neutral-900">
                       {p.request.tema}
                     </h3>
@@ -109,16 +115,22 @@ export function HistoryScreen({ onVoltar }: Props) {
                 <Button
                   size="sm"
                   onClick={() => copiarParaClipboard(p.response, p.request)}
+                  icon={<Copy className="h-4 w-4" />}
                 >
                   Copiar
                 </Button>
-                <Button size="sm" onClick={() => exportToPDF(p.request, p.response)}>
+                <Button
+                  size="sm"
+                  onClick={() => exportToPDF(p.request, p.response)}
+                  icon={<FileDown className="h-4 w-4" />}
+                >
                   PDF
                 </Button>
                 <Button
                   size="sm"
                   variant="primary"
                   onClick={() => exportToWord(p.request, p.response)}
+                  icon={<FileText className="h-4 w-4" />}
                 >
                   Word
                 </Button>
@@ -127,6 +139,7 @@ export function HistoryScreen({ onVoltar }: Props) {
                   variant="danger"
                   className="ml-auto"
                   onClick={() => remove(p.id)}
+                  icon={<Trash2 className="h-4 w-4" />}
                 >
                   Apagar
                 </Button>

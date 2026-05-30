@@ -1,5 +1,13 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import {
+  AlertTriangle,
+  Check,
+  Copy,
+  FileDown,
+  FileText,
+  Loader2,
+} from "lucide-react";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
 import { MODO_BY_ID } from "../lib/constants";
@@ -96,23 +104,29 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={handleCopiar}>
-            {copiado ? "✓ Copiado!" : "📋 Copiar"}
+          <Button
+            size="sm"
+            onClick={handleCopiar}
+            icon={copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          >
+            {copiado ? "Copiado" : "Copiar"}
           </Button>
           <Button
             size="sm"
             onClick={handlePDF}
             loading={salvandoExport === "pdf"}
+            icon={<FileDown className="h-4 w-4" />}
           >
-            📄 Baixar PDF
+            PDF
           </Button>
           <Button
             variant="primary"
             size="sm"
             onClick={handleWord}
             loading={salvandoExport === "word"}
+            icon={<FileText className="h-4 w-4" />}
           >
-            📝 Baixar Word
+            Word
           </Button>
         </div>
       </header>
@@ -179,9 +193,12 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
         </details>
       )}
 
-      <p className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-        ⚠️ <strong>Aviso.</strong> {resultado.aviso}
-      </p>
+      <div className="mt-6 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+        <p>
+          <span className="font-semibold">Aviso.</span> {resultado.aviso}
+        </p>
+      </div>
     </motion.div>
   );
 }
@@ -192,18 +209,21 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
 
 function ResultPlaceholder({ modo }: { modo: Modo }) {
   const m = MODO_BY_ID[modo];
+  const Icon = m.icon;
   return (
     <div className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center">
-      <span className="mb-4 text-5xl opacity-60">{m.icone}</span>
+      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-400">
+        <Icon className="h-6 w-6" strokeWidth={1.75} />
+      </div>
       <h3 className="text-base font-semibold text-neutral-700">
-        Resultado aparece aqui
+        O resultado aparece aqui
       </h3>
       <p className="mt-2 max-w-xs text-sm text-neutral-500">
         Preencha o formulário ao lado e clique em{" "}
         <span className="font-medium text-brand-700">
-          Gerar {m.titulo.toLowerCase()}
+          {m.titulo}
         </span>{" "}
-        para ver seu material personalizado.
+        para gerar.
       </p>
     </div>
   );
@@ -213,16 +233,12 @@ function ResultLoading({ modo }: { modo: Modo }) {
   const m = MODO_BY_ID[modo];
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-card">
-      <div className="mb-4 flex items-center gap-3">
-        <motion.span
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
-          className="text-2xl"
-        >
-          {m.icone}
-        </motion.span>
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+          <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2} />
+        </div>
         <div>
-          <p className="text-sm font-medium text-neutral-800">
+          <p className="text-sm font-medium text-neutral-900">
             Gerando {m.titulo.toLowerCase()}…
           </p>
           <p className="text-xs text-neutral-500">

@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { GripVertical, X } from "lucide-react";
 import { Button } from "./ui/Button";
 import type { AulaInput as AulaInputT } from "../lib/types";
 
@@ -24,7 +25,7 @@ export function AulaInputRow({ numero, aula, onChange, onRemove }: Props) {
       )}
     >
       <span aria-hidden className="text-neutral-400">
-        ⋮⋮
+        <GripVertical className="h-4 w-4" />
       </span>
       <span className="text-sm font-medium text-brand-700">
         Aula {numero}
@@ -48,7 +49,7 @@ export function AulaInputRow({ numero, aula, onChange, onRemove }: Props) {
           aria-label={`Remover aula ${numero}`}
           className="!px-2"
         >
-          ✕
+          <X className="h-4 w-4" />
         </Button>
       )}
     </div>
