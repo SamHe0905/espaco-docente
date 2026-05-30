@@ -136,7 +136,6 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
       <div className="space-y-3">
         {resultado.aulas.map((a) => {
           const palavras = a.palavras;
-          const ok = palavras >= 40 && palavras <= 60;
           return (
             <motion.article
               key={a.numero}
@@ -150,11 +149,9 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
                   <Badge tone="neutral">{a.codigo_bncc}</Badge>
                 )}
                 <Badge tone="neutral">{formataData(a.data)}</Badge>
-                <Badge tone={ok ? "success" : "warn"}>
-                  {palavras} palavras
-                </Badge>
+                <Badge tone="neutral">{palavras} palavras</Badge>
               </div>
-              <p className="text-sm leading-relaxed text-neutral-800">
+              <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-800">
                 {a.texto}
               </p>
             </motion.article>

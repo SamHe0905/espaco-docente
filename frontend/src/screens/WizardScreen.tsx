@@ -283,31 +283,14 @@ export function WizardScreen({ modo, onVoltar }: Props) {
 
           {/* 2. Tema */}
           <StepBlock numero={2} titulo="Tema / Assunto">
-            <div>
-              <Input
-                label="Tema principal"
-                placeholder={`Ex: ${exemplosTema[0]}`}
-                value={state.tema}
-                onChange={(e) =>
-                  dispatch({ type: "set", field: "tema", value: e.target.value })
-                }
-              />
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="text-xs text-neutral-500">Exemplos:</span>
-                {exemplosTema.map((ex) => (
-                  <button
-                    key={ex}
-                    type="button"
-                    onClick={() =>
-                      dispatch({ type: "set", field: "tema", value: ex })
-                    }
-                    className="rounded-full border border-neutral-200 bg-white px-2.5 py-0.5 text-xs text-neutral-600 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
-                  >
-                    {ex}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <Input
+              label="Tema principal"
+              placeholder={`Ex: ${exemplosTema.join(", ")}`}
+              value={state.tema}
+              onChange={(e) =>
+                dispatch({ type: "set", field: "tema", value: e.target.value })
+              }
+            />
             <Input
               label="Foco específico (opcional)"
               hint="Ex: aspectos econômicos, impactos no Brasil…"

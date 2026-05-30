@@ -14,8 +14,18 @@ from .schemas import (
 )
 from .search import get_by_codigo, search_curriculum
 
-MIN_WORDS = 40
-MAX_WORDS = 60
+# Faixa de palavras por aula varia conforme o modo. Modos com saida estruturada
+# (lista de exercicios, projeto) tem validacao de palavras mais permissiva
+# porque o corpo nao e um paragrafo unico.
+WORD_RANGE_POR_MODO: dict[str, tuple[int, int]] = {
+    "plano_de_aula": (40, 60),
+    "sugestao_de_aula": (90, 200),
+    "recomposicao_paralela": (50, 90),
+    "adaptacao_educacao_especial": (55, 110),
+    # Sem limite forte: o formato e estruturado, contagem nao se aplica
+    "lista_de_exercicios": (50, 600),
+    "projetos_e_trabalhos": (50, 200),
+}
 
 # captura "Aula X - CODIGO - DD/MM" com varias variacoes de tracos
 # (en-dash, em-dash, hifen, com/sem espacos)
@@ -29,13 +39,17 @@ def count_words(text: str) -> int:
     return len([w for w in re.findall(r"\b[\wÀ-ÿ]+\b", text)])
 
 
-def parse_llm_output(text: str, requested_aulas_count: int) -> tuple[list[AulaOutput], list[str]]:
+def parse_llm_output(
+    text: str, requested_aulas_count: int, modo: str = "plano_de_aula"
+) -> tuple[list[AulaOutput], list[str]]:
     """Faz parse do output do LLM em AulaOutput.
 
     Retorna (aulas, problemas). Se problemas != [], deve-se considerar retry.
+    A faixa de palavras valida varia conforme o modo.
     """
     problemas: list[str] = []
     aulas: list[AulaOutput] = []
+    min_w, max_w = WORD_RANGE_POR_MODO.get(modo, (40, 60))
 
     # encontra todos os cabecalhos
     matches = list(HEADER_RX.finditer(text))
@@ -59,10 +73,10 @@ def parse_llm_output(text: str, requested_aulas_count: int) -> tuple[list[AulaOu
         bloco = text[start:end].strip()
 
         words = count_words(bloco)
-        if words < MIN_WORDS:
-            problemas.append(f"Aula {numero} tem {words} palavras (minimo {MIN_WORDS})")
-        elif words > MAX_WORDS:
-            problemas.append(f"Aula {numero} tem {words} palavras (maximo {MAX_WORDS})")
+        if words < min_w:
+            problemas.append(f"Aula {numero} tem {words} palavras (minimo {min_w})")
+        elif words > max_w:
+            problemas.append(f"Aula {numero} tem {words} palavras (maximo {max_w})")
 
         # parse de data DD/MM (assume ano corrente)
         try:
@@ -114,14 +128,14 @@ async def gerar(req: GenerateRequest) -> GenerateResponse:
     raw = await chat(messages, temperature=0.6, max_tokens=2200)
 
     # 3. valida
-    aulas, problemas = parse_llm_output(raw, len(req.aulas))
+    aulas, problemas = parse_llm_output(raw, len(req.aulas), req.modo)
 
     # 4. retry uma vez se houver problemas
     if problemas and aulas:
         retry_msgs = build_retry_message(raw, problemas)
         try:
             raw2 = await chat(retry_msgs, temperature=0.35, max_tokens=2200)
-            aulas2, problemas2 = parse_llm_output(raw2, len(req.aulas))
+            aulas2, problemas2 = parse_llm_output(raw2, len(req.aulas), req.modo)
             # so substitui se o retry diminuiu problemas
             if len(problemas2) < len(problemas):
                 aulas = aulas2

@@ -68,31 +68,40 @@ export async function exportToWord(
       }),
   );
 
-  const aulas = res.aulas.flatMap((a) => [
-    new Paragraph({
-      spacing: { before: 240, after: 120, line: 360 },
-      children: [
-        new TextRun({
-          text: `Aula ${a.numero} — ${a.codigo_bncc || "—"} — ${formataData(a.data)}`,
-          bold: true,
-          font: "Times New Roman",
-          size: 24,
-        }),
-      ],
-    }),
-    new Paragraph({
-      spacing: { line: 360 },
-      alignment: AlignmentType.JUSTIFIED,
-      indent: { firstLine: 708 }, // 1.25cm em twips
-      children: [
-        new TextRun({
-          text: a.texto,
-          font: "Times New Roman",
-          size: 24,
-        }),
-      ],
-    }),
-  ]);
+  const aulas = res.aulas.flatMap((a) => {
+    // Quebra o texto em linhas para preservar formatos estruturados
+    // (lista de exercicios, etapas de projeto). Linhas vazias viram
+    // paragrafos vazios (separador visual).
+    const linhas = a.texto.split(/\n/);
+    const paragsCorpo = linhas.map((linha) =>
+      new Paragraph({
+        spacing: { line: 360 },
+        alignment: AlignmentType.JUSTIFIED,
+        indent: linha.trim() ? { firstLine: 708 } : undefined,
+        children: [
+          new TextRun({
+            text: linha,
+            font: "Times New Roman",
+            size: 24,
+          }),
+        ],
+      }),
+    );
+    return [
+      new Paragraph({
+        spacing: { before: 240, after: 120, line: 360 },
+        children: [
+          new TextRun({
+            text: `Aula ${a.numero} — ${a.codigo_bncc || "—"} — ${formataData(a.data)}`,
+            bold: true,
+            font: "Times New Roman",
+            size: 24,
+          }),
+        ],
+      }),
+      ...paragsCorpo,
+    ];
+  });
 
   const doc = new Document({
     creator: "Espaço Docente",
@@ -242,14 +251,21 @@ export function exportToPDF(req: GenerateRequest, res: GenerateResponse): void {
     );
     y += 7;
     pdf.setFont("times", "normal");
-    const linhas = pdf.splitTextToSize(a.texto, larguraUtil);
-    for (const linha of linhas) {
-      checaQuebra(7);
-      pdf.text(linha, margemEsq, y, {
-        align: "justify",
-        maxWidth: larguraUtil,
-      });
-      y += 7;
+    // Preserva quebras de linha do texto original (importante pra exercicios/projetos)
+    const blocos = a.texto.split(/\n/);
+    for (const bloco of blocos) {
+      if (!bloco.trim()) {
+        y += 4;
+        continue;
+      }
+      const linhas = pdf.splitTextToSize(bloco, larguraUtil);
+      for (const linha of linhas) {
+        checaQuebra(7);
+        pdf.text(linha, margemEsq, y, {
+          maxWidth: larguraUtil,
+        });
+        y += 7;
+      }
     }
     y += 4;
   }
