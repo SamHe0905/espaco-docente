@@ -9,13 +9,13 @@ import { HabilidadeBox } from "../components/HabilidadeBox";
 import { AulaInputRow } from "../components/AulaInput";
 import { ResultPane } from "../components/ResultPane";
 import {
-  DISCIPLINAS,
   ETAPAS,
   EXEMPLOS_TEMA_GENERICOS,
   EXEMPLOS_TEMA_POR_DISCIPLINA,
   MODO_BY_ID,
   SERIES_POR_ETAPA,
   WIZARD_CONFIG_POR_MODO,
+  disciplinasParaEtapa,
   getEffectiveWizardConfig,
 } from "../lib/constants";
 import { api, ApiError } from "../lib/api";
@@ -167,6 +167,11 @@ export function WizardScreen({ modo, onVoltar }: Props) {
 
   const seriesDisponiveis = useMemo(
     () => (state.etapa ? SERIES_POR_ETAPA[state.etapa] || [] : []),
+    [state.etapa],
+  );
+
+  const disciplinasDisponiveis = useMemo(
+    () => disciplinasParaEtapa(state.etapa),
     [state.etapa],
   );
 
@@ -417,6 +422,8 @@ export function WizardScreen({ modo, onVoltar }: Props) {
               onChange={(e) => {
                 dispatch({ type: "set", field: "etapa", value: e.target.value });
                 dispatch({ type: "set", field: "serie", value: "" });
+                // tambem zera disciplina porque pode nao bater com a nova etapa
+                dispatch({ type: "set", field: "disciplina", value: "" });
               }}
               options={ETAPAS.map((e) => ({ value: e, label: e }))}
             />
@@ -432,13 +439,24 @@ export function WizardScreen({ modo, onVoltar }: Props) {
               />
             )}
             <Select
-              label="Componente Curricular"
+              label={
+                state.etapa === "Educacao Infantil"
+                  ? "Campo de experiência"
+                  : state.etapa === "Ensino Medio"
+                  ? "Área do conhecimento"
+                  : "Componente curricular"
+              }
               value={state.disciplina}
-              placeholder="Selecione a disciplina"
+              placeholder={
+                state.etapa
+                  ? "Selecione..."
+                  : "Escolha a etapa antes"
+              }
+              disabled={!state.etapa}
               onChange={(e) =>
                 dispatch({ type: "set", field: "disciplina", value: e.target.value })
               }
-              options={DISCIPLINAS.map((d) => ({ value: d, label: d }))}
+              options={disciplinasDisponiveis.map((d) => ({ value: d, label: d }))}
             />
           </StepBlock>
 

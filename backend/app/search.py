@@ -76,7 +76,19 @@ def search_curriculum(
                         hits.append(e)
             return hits[:top_k]
         # Sem match exato — cai pra semantica
-    return _semantic_search(query, top_k, etapa, disciplina)
+    # Tenta com os filtros completos primeiro
+    hits = _semantic_search(query, top_k, etapa, disciplina)
+    if hits:
+        return hits
+
+    # Fallback 1: relaxa disciplina (mantem etapa)
+    if disciplina:
+        hits = _semantic_search(query, top_k, etapa, None)
+        if hits:
+            return hits
+
+    # Fallback 2: relaxa tudo
+    return _semantic_search(query, top_k, None, None)
 
 
 def _semantic_search(

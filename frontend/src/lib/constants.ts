@@ -102,8 +102,8 @@ export const EXEMPLOS_TEMA_GENERICOS = [
   "ecossistemas",
 ];
 
-export const DISCIPLINAS = [
-  // Fundamental
+// Componentes curriculares do Ensino Fundamental
+export const DISCIPLINAS_FUNDAMENTAL = [
   "Arte",
   "Ciencias",
   "Educacao Fisica",
@@ -113,11 +113,52 @@ export const DISCIPLINAS = [
   "Lingua Inglesa",
   "Lingua Portuguesa",
   "Matematica",
-  // Médio (áreas)
+] as const;
+
+// Areas do Ensino Medio (NEM)
+export const DISCIPLINAS_MEDIO = [
   "Ciencias Humanas e Sociais Aplicadas",
   "Ciencias da Natureza e suas Tecnologias",
   "Linguagens e suas Tecnologias",
   "Matematica e suas Tecnologias",
+  "Lingua Portuguesa",
+] as const;
+
+// Campos de experiencia da Educacao Infantil (BNCC)
+export const DISCIPLINAS_INFANTIL = [
+  "O eu, o outro e o nos",
+  "Corpo, gestos e movimentos",
+  "Tracos, sons, cores e formas",
+  "Escuta, fala, pensamento e imaginacao",
+  "Espacos, tempos, quantidades, relacoes e transformacoes",
+] as const;
+
+// Retorna o array adequado pra etapa selecionada
+export function disciplinasParaEtapa(etapa: string): readonly string[] {
+  switch (etapa) {
+    case "Educacao Infantil":
+      return DISCIPLINAS_INFANTIL;
+    case "Ensino Medio":
+      return DISCIPLINAS_MEDIO;
+    case "Ensino Fundamental":
+      return DISCIPLINAS_FUNDAMENTAL;
+    default:
+      // Sem etapa escolhida: lista combinada (fallback)
+      return [
+        ...DISCIPLINAS_FUNDAMENTAL,
+        ...DISCIPLINAS_MEDIO.filter(
+          (d) => !DISCIPLINAS_FUNDAMENTAL.includes(d as never),
+        ),
+      ];
+  }
+}
+
+// Mantido pra compatibilidade
+export const DISCIPLINAS = [
+  ...DISCIPLINAS_FUNDAMENTAL,
+  ...DISCIPLINAS_MEDIO.filter(
+    (d) => !DISCIPLINAS_FUNDAMENTAL.includes(d as never),
+  ),
 ] as const;
 
 export interface ModoInfo {
