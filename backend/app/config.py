@@ -32,10 +32,11 @@ class Settings(BaseSettings):
     llm_groq_model: str = "llama-3.3-70b-versatile"
 
     llm_cerebras_api_key: str | None = None
-    llm_cerebras_model: str = "llama-3.3-70b"
+    # gpt-oss-120b: disponivel na key free da Cerebras (llama-3.3-70b requer plan pago)
+    llm_cerebras_model: str = "gpt-oss-120b"
 
     llm_gemini_api_key: str | None = None
-    llm_gemini_model: str = "gemini-2.0-flash-lite"
+    llm_gemini_model: str = "gemini-3.1-flash-lite"
 
     # --- compat retroativo (deprecated) ---
     # Se llm_chain="groq" e llm_groq_api_key vazia, usa estes:
