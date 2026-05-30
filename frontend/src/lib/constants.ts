@@ -181,6 +181,10 @@ export interface WizardConfig {
   rotuloAulasSection: string;     // "Aulas" / "Etapas do projeto" / null para esconder
   subtituloAulas: string;
   precisaAulasComData: boolean;   // se false, gera 1 aula fake sem data
+  // Modo de coleta das aulas: "datas" = um date picker por aula
+  //                          "quantidade" = soh um numero (datas viram hoje)
+  //                          "oculto"     = nao mostra nada (vide precisaAulasComData=false)
+  aulasModo?: "datas" | "quantidade" | "oculto";
   // Step 5 — preferencias
   mostrarMetodologia: boolean;
   mostrarRecursos: boolean;
@@ -318,8 +322,9 @@ export const WIZARD_CONFIG_POR_MODO: Record<Modo, WizardConfig> = {
   recomposicao_paralela: {
     tituloAcao: "Gerar recomposição",
     rotuloAulasSection: "Aulas de recomposição",
-    subtituloAulas: "até 5 aulas focadas na lacuna",
+    subtituloAulas: "quantas aulas focadas na lacuna?",
     precisaAulasComData: true,
+    aulasModo: "quantidade",
     mostrarMetodologia: false,
     mostrarRecursos: true,
     mostrarObservacoesTurma: true,

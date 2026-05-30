@@ -172,12 +172,17 @@ export function WizardScreen({ modo, onVoltar }: Props) {
       return v !== undefined && String(v).trim().length > 0;
     });
 
+  const aulasDataOk =
+    !config.precisaAulasComData ||
+    config.aulasModo === "quantidade" ||
+    state.aulas.every((a) => a.data);
+
   const podeGerar =
     !!state.etapa &&
     !!state.disciplina &&
     state.tema.trim().length >= 2 &&
     state.aulas.length >= 1 &&
-    (!config.precisaAulasComData || state.aulas.every((a) => a.data)) &&
+    aulasDataOk &&
     extrasObrigatoriosOk;
 
   async function buscarBNCC() {
@@ -210,10 +215,16 @@ export function WizardScreen({ modo, onVoltar }: Props) {
     setGerando(true);
     setResultado(null);
 
-    // Aulas: se modo nao precisa de aulas com data, mandamos 1 aula com data de hoje
-    const aulas = config.precisaAulasComData
-      ? state.aulas
-      : [{ data: new Date().toISOString().slice(0, 10) }];
+    // Aulas:
+    // - "datas":      mandamos como o user preencheu
+    // - "quantidade": forcamos data = hoje em todas
+    // - sem aulas:    mandamos 1 aula com data de hoje (placeholder)
+    const hoje = new Date().toISOString().slice(0, 10);
+    const aulas = !config.precisaAulasComData
+      ? [{ data: hoje }]
+      : config.aulasModo === "quantidade"
+      ? state.aulas.map((a) => ({ ...a, data: a.data || hoje }))
+      : state.aulas;
 
     // converte extras (strings) pros campos esperados pelo backend
     const extras = state.extras;
@@ -498,8 +509,8 @@ export function WizardScreen({ modo, onVoltar }: Props) {
             )}
           </StepBlock>
 
-          {/* 4. Aulas / Etapas / Configurações da lista */}
-          {config.precisaAulasComData ? (
+          {/* 4. Aulas / Etapas / Configurações */}
+          {config.precisaAulasComData && (config.aulasModo ?? "datas") === "datas" && (
             <StepBlock
               numero={4}
               titulo={config.rotuloAulasSection}
@@ -533,8 +544,65 @@ export function WizardScreen({ modo, onVoltar }: Props) {
                 </Button>
               )}
             </StepBlock>
-          ) : (
-            // Sem aulas com data — mostramos apenas os campos extras desse modo
+          )}
+
+          {config.precisaAulasComData && config.aulasModo === "quantidade" && (
+            <StepBlock
+              numero={4}
+              titulo={config.rotuloAulasSection}
+              subtitulo={config.subtituloAulas}
+            >
+              <div className="flex items-end gap-3">
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => {
+                        const hoje = new Date().toISOString().slice(0, 10);
+                        // troca o array de aulas pra ter exatamente N entradas
+                        const atual = state.aulas.length;
+                        if (n > atual) {
+                          for (let i = atual; i < n; i++) {
+                            dispatch({ type: "add-aula" });
+                          }
+                        } else if (n < atual) {
+                          for (let i = atual; i > n; i--) {
+                            dispatch({ type: "remove-aula", index: i - 1 });
+                          }
+                        }
+                        // garante data padrao em todas
+                        state.aulas.forEach((a, i) => {
+                          if (!a.data && i < n) {
+                            dispatch({
+                              type: "set-aula",
+                              index: i,
+                              aula: { ...a, data: hoje },
+                            });
+                          }
+                        });
+                      }}
+                      className={
+                        "h-10 w-10 rounded-lg border text-sm font-medium transition-colors " +
+                        (state.aulas.length === n
+                          ? "border-brand-500 bg-brand-50 text-brand-800"
+                          : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300")
+                      }
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <p className="pb-2 text-xs text-neutral-500">
+                  {state.aulas.length} aula
+                  {state.aulas.length > 1 ? "s" : ""} selecionada
+                  {state.aulas.length > 1 ? "s" : ""}
+                </p>
+              </div>
+            </StepBlock>
+          )}
+
+          {!config.precisaAulasComData &&
             config.camposExtras.length > 0 && (
               <StepBlock
                 numero={4}
@@ -543,8 +611,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
               >
                 {config.camposExtras.map((c) => renderCampoExtra(c))}
               </StepBlock>
-            )
-          )}
+            )}
 
           {/* 5. Campos extras + preferencias (quando ha aulas) */}
           {(config.precisaAulasComData && config.camposExtras.length > 0) && (
