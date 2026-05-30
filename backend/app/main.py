@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .generation import gerar
-from .llm import LLMError
+from .llm import LLMError, LLMRateLimitError
 from .questoes import search_questoes
 from .schemas import (
     GenerateRequest,
@@ -61,6 +61,21 @@ def post_search(req: SearchBNCCRequest) -> SearchBNCCResponse:
 async def post_generate(req: GenerateRequest) -> GenerateResponse:
     try:
         return await gerar(req)
+    except LLMRateLimitError as e:
+        # 429: cota esgotada — front mostra mensagem humana
+        retry_min = (
+            f" Tente novamente em ~{e.retry_after_seconds // 60} min."
+            if e.retry_after_seconds
+            else ""
+        )
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                "A cota gratuita da IA acabou por enquanto."
+                + retry_min
+                + " Você pode esperar o reset ou ativar billing na Groq."
+            ),
+        )
     except LLMError as e:
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -73,5 +88,6 @@ def post_search_questoes(req: SearchQuestoesRequest) -> SearchQuestoesResponse:
         disciplina=req.disciplina,
         ano_min=req.ano_min,
         ano_max=req.ano_max,
+        vestibulares=req.vestibulares,
     )
     return SearchQuestoesResponse(hits=hits)

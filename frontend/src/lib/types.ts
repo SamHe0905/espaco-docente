@@ -114,6 +114,7 @@ export interface QuestaoHit {
 export interface SearchQuestoesRequest {
   query: string;
   disciplina?: string | null;
+  vestibulares?: string[] | null;
   ano_min?: number | null;
   ano_max?: number | null;
   top_k?: number;

@@ -29,7 +29,13 @@ const AREAS_ENEM = [
   "Matematica e suas Tecnologias",
 ];
 
-const ANOS = Array.from({ length: 2023 - 2009 + 1 }, (_, i) => 2009 + i);
+const ANOS = Array.from({ length: 2024 - 2009 + 1 }, (_, i) => 2009 + i);
+
+const VESTIBULARES_DISPONIVEIS = [
+  { value: "ENEM", label: "ENEM" },
+  { value: "FUVEST", label: "FUVEST (USP)" },
+  { value: "UNICAMP", label: "UNICAMP" },
+];
 
 interface Props {
   onVoltar: () => void;
@@ -38,6 +44,9 @@ interface Props {
 export function QuestoesScreen({ onVoltar }: Props) {
   const [query, setQuery] = useState("");
   const [area, setArea] = useState("");
+  const [vestibSelecionados, setVestibSelecionados] = useState<Set<string>>(
+    new Set(["ENEM", "FUVEST", "UNICAMP"]),
+  );
   const [anoMin, setAnoMin] = useState<string>("");
   const [anoMax, setAnoMax] = useState<string>("");
   const [topK, setTopK] = useState(8);
@@ -69,6 +78,7 @@ export function QuestoesScreen({ onVoltar }: Props) {
       const r = await api.searchQuestoes({
         query: query.trim(),
         disciplina: area || null,
+        vestibulares: vestibSelecionados.size > 0 ? Array.from(vestibSelecionados) : null,
         ano_min: anoMin ? parseInt(anoMin) : null,
         ano_max: anoMax ? parseInt(anoMax) : null,
         top_k: topK,
@@ -179,6 +189,44 @@ export function QuestoesScreen({ onVoltar }: Props) {
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
         />
+
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-neutral-700">
+            Vestibulares
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {VESTIBULARES_DISPONIVEIS.map((v) => {
+              const checked = vestibSelecionados.has(v.value);
+              return (
+                <label
+                  key={v.value}
+                  className={
+                    "inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors " +
+                    (checked
+                      ? "border-brand-400 bg-brand-50 text-brand-900"
+                      : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300")
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() =>
+                      setVestibSelecionados((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(v.value)) next.delete(v.value);
+                        else next.add(v.value);
+                        return next;
+                      })
+                    }
+                    className="h-4 w-4 accent-brand-600"
+                  />
+                  {v.label}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
           <div className="sm:col-span-2">
             <Select

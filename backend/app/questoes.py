@@ -17,11 +17,13 @@ def search_questoes(
     disciplina: str | None = None,
     ano_min: int | None = None,
     ano_max: int | None = None,
+    vestibulares: list[str] | None = None,
 ) -> list[QuestaoHit]:
     vec = embed(query)
     client = get_client()
     # busca mais que o pedido pra ter margem depois de filtrar irrelevantes
-    fetch_k = max(top_k * 2, top_k + 5)
+    # e tambem porque podemos filtrar por vestibular no app
+    fetch_k = max(top_k * 3, top_k + 10) if vestibulares else max(top_k * 2, top_k + 5)
     resp = client.rpc(
         "match_questoes",
         {
@@ -33,14 +35,20 @@ def search_questoes(
         },
     ).execute()
 
+    vestibulares_set = (
+        {v.upper() for v in vestibulares} if vestibulares else None
+    )
+
     hits: list[QuestaoHit] = []
-    # dedupe por (ano, numero) — algumas questoes vem em duas linguas (ingles+espanhol)
-    seen: set[tuple[int, int]] = set()
+    # dedupe por (vestibular, ano, numero) — algumas questoes vem em duas linguas
+    seen: set[tuple[str, int, int]] = set()
     for row in resp.data or []:
         sim = row["similarity"]
         if sim < SIMILARIDADE_MINIMA:
             continue
-        key = (row["ano"], row["numero"])
+        if vestibulares_set and row.get("vestibular", "").upper() not in vestibulares_set:
+            continue
+        key = (row["vestibular"], row["ano"], row["numero"])
         if key in seen:
             continue
         seen.add(key)

@@ -157,6 +157,7 @@ class QuestaoHit(BaseModel):
 class SearchQuestoesRequest(BaseModel):
     query: str = Field(..., min_length=2, max_length=500)
     disciplina: str | None = None
+    vestibulares: list[str] | None = None  # ex: ["ENEM", "FUVEST"]
     ano_min: int | None = None
     ano_max: int | None = None
     top_k: int = Field(8, ge=1, le=30)
