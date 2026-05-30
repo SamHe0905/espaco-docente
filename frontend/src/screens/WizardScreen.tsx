@@ -37,6 +37,9 @@ interface FormState {
   codigoBuscaInput: string;
   habilidadesSelecionadas: CurriculumHit[];
   buscandoBNCC: boolean;
+  // resultados da ultima busca, pra o user escolher quais adicionar
+  resultadosBusca: CurriculumHit[];
+  buscaJaExecutada: boolean;
   aulas: AulaInputT[];
   metodologia: string;
   recursos: string;
@@ -46,12 +49,14 @@ interface FormState {
 }
 
 type Action =
-  | { type: "set"; field: keyof Omit<FormState, "extras">; value: string }
+  | { type: "set"; field: keyof Omit<FormState, "extras" | "resultadosBusca" | "habilidadesSelecionadas" | "buscaJaExecutada" | "aulas">; value: string }
   | { type: "set-extra"; key: string; value: string }
   | { type: "add-habilidade"; hit: CurriculumHit }
   | { type: "remove-habilidade"; codigo: string }
   | { type: "limpar-habilidades" }
   | { type: "set-buscando"; value: boolean }
+  | { type: "set-resultados-busca"; hits: CurriculumHit[] }
+  | { type: "limpar-resultados-busca" }
   | { type: "set-aula"; index: number; aula: AulaInputT }
   | { type: "add-aula" }
   | { type: "remove-aula"; index: number }
@@ -68,6 +73,8 @@ function makeInitialState(): FormState {
     codigoBuscaInput: "",
     habilidadesSelecionadas: [],
     buscandoBNCC: false,
+    resultadosBusca: [],
+    buscaJaExecutada: false,
     aulas: [{ data: hoje }],
     metodologia: "",
     recursos: "",
@@ -91,7 +98,6 @@ function reducer(state: FormState, action: Action): FormState {
       return {
         ...state,
         habilidadesSelecionadas: [...state.habilidadesSelecionadas, action.hit],
-        codigoBuscaInput: "",
       };
     }
     case "remove-habilidade":
@@ -105,6 +111,14 @@ function reducer(state: FormState, action: Action): FormState {
       return { ...state, habilidadesSelecionadas: [] };
     case "set-buscando":
       return { ...state, buscandoBNCC: action.value };
+    case "set-resultados-busca":
+      return {
+        ...state,
+        resultadosBusca: action.hits,
+        buscaJaExecutada: true,
+      };
+    case "limpar-resultados-busca":
+      return { ...state, resultadosBusca: [], buscaJaExecutada: false };
     case "set-aula": {
       const next = [...state.aulas];
       next[action.index] = action.aula;
@@ -196,13 +210,13 @@ export function WizardScreen({ modo, onVoltar }: Props) {
         query: termo,
         etapa: state.etapa || null,
         disciplina: state.disciplina || null,
-        top_k: 1,
+        top_k: 5,
       });
-      const hit = r.hits[0] || null;
-      if (hit) {
-        dispatch({ type: "add-habilidade", hit });
-      } else {
-        setErro("Nenhuma habilidade encontrada para o termo.");
+      dispatch({ type: "set-resultados-busca", hits: r.hits });
+      if (r.hits.length === 0) {
+        setErro(
+          "Nenhuma habilidade encontrada. Tente outro termo ou remova os filtros.",
+        );
       }
     } catch (e) {
       setErro(e instanceof ApiError ? e.message : "Falha ao buscar habilidade.");
@@ -456,12 +470,12 @@ export function WizardScreen({ modo, onVoltar }: Props) {
           <StepBlock
             numero={3}
             titulo="Habilidade BNCC"
-            subtitulo="você pode adicionar mais de uma"
+            subtitulo="busque por código ou tema; pode adicionar várias"
           >
             <div className="flex items-end gap-2">
               <Input
                 label="Código ou termo"
-                hint="Ex: EM13CHS502 — ou um termo como 'globalização'"
+                hint="Ex: EM13CHS502  —  ou um termo: globalização, fração, leitura"
                 placeholder="EM13CHS502"
                 value={state.codigoBuscaInput}
                 onKeyDown={(e) => {
@@ -485,14 +499,80 @@ export function WizardScreen({ modo, onVoltar }: Props) {
                   !state.codigoBuscaInput.trim() && !state.tema.trim()
                 }
               >
-                {state.habilidadesSelecionadas.length > 0
-                  ? "Adicionar"
-                  : "Buscar"}
+                Buscar
               </Button>
             </div>
 
+            {/* Resultados da ultima busca */}
+            {state.buscaJaExecutada && state.resultadosBusca.length > 0 && (
+              <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50/50 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-neutral-600">
+                    {state.resultadosBusca.length} resultado
+                    {state.resultadosBusca.length > 1 ? "s" : ""} — clique em "Adicionar" para usar
+                  </p>
+                  <button
+                    onClick={() => dispatch({ type: "limpar-resultados-busca" })}
+                    className="text-xs text-neutral-500 hover:text-neutral-800"
+                  >
+                    Ocultar
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  {state.resultadosBusca.map((hit) => {
+                    const jaAdicionada = state.habilidadesSelecionadas.some(
+                      (h) => h.codigo === hit.codigo,
+                    );
+                    return (
+                      <div
+                        key={hit.codigo}
+                        className="flex items-start gap-3 rounded-lg border border-neutral-200 bg-white p-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs font-semibold text-brand-700">
+                              {hit.codigo}
+                            </span>
+                            <span className="text-xs text-neutral-500">
+                              {hit.disciplina} • {hit.serie || hit.etapa}
+                            </span>
+                            {hit.similarity >= 0.99 ? (
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                exato
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-neutral-400">
+                                relevância {(hit.similarity * 100).toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-700">
+                            {hit.habilidades || hit.texto}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={jaAdicionada ? "ghost" : "secondary"}
+                          disabled={jaAdicionada}
+                          onClick={() =>
+                            dispatch({ type: "add-habilidade", hit })
+                          }
+                        >
+                          {jaAdicionada ? "Adicionada" : "Adicionar"}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Habilidades ja escolhidas */}
             {state.habilidadesSelecionadas.length > 0 && (
               <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Selecionadas ({state.habilidadesSelecionadas.length})
+                </p>
                 {state.habilidadesSelecionadas.map((h) => (
                   <HabilidadeBox
                     key={h.codigo}
