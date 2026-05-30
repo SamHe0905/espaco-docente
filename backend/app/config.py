@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     # ---- LLM em cadeia ----
     # Define a ordem dos providers tentados. Ex: "groq,cerebras,gemini"
     # Quando um da 429 (rate limit), tenta o proximo da fila automaticamente.
-    llm_chain: str = "groq"
+    # Pode ser sobrescrito por env LLM_CHAIN.
+    llm_chain: str = "groq,cerebras,gemini"
 
     # Cada provider tem chave + modelo proprio (todos opcionais).
     llm_groq_api_key: str | None = None
