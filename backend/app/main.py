@@ -56,6 +56,13 @@ def get_llm_usage() -> dict:
     return snap
 
 
+@app.get("/admin/stats")
+def get_admin_stats() -> dict:
+    """Estatisticas agregadas dos ultimos 30 dias pro dashboard admin."""
+    from . import admin as admin_mod
+    return admin_mod.stats()
+
+
 @app.post("/search-bncc", response_model=SearchBNCCResponse)
 def post_search(req: SearchBNCCRequest) -> SearchBNCCResponse:
     hits = search_curriculum(

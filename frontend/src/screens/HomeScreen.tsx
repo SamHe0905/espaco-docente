@@ -13,12 +13,14 @@ interface Props {
   onEscolher: (modo: Modo) => void;
   onAbrirHistorico: () => void;
   onAbrirBancoQuestoes: () => void;
+  onAbrirAdmin?: () => void;
 }
 
 export function HomeScreen({
   onEscolher,
   onAbrirHistorico,
   onAbrirBancoQuestoes,
+  onAbrirAdmin,
 }: Props) {
   const [qtdHistorico, setQtdHistorico] = useState(0);
   useEffect(() => {
@@ -139,6 +141,16 @@ export function HomeScreen({
           professor permanece como mediador principal do processo educativo —
           sempre revise as sugestões antes de usar em sala.
         </p>
+        {onAbrirAdmin && (
+          <div className="mt-3 text-right">
+            <button
+              onClick={onAbrirAdmin}
+              className="text-xs font-medium text-neutral-400 transition-colors hover:text-brand-700"
+            >
+              Painel administrativo
+            </button>
+          </div>
+        )}
       </footer>
     </div>
   );
