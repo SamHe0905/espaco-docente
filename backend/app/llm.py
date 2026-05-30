@@ -1,13 +1,15 @@
-"""Cliente LLM com suporte a multiplos providers + fallback automatico.
+"""Cliente LLM com cadeia de N providers OpenAI-compativeis.
 
-Providers suportados (todos com API compativel OpenAI):
-  - groq:      https://api.groq.com/openai/v1/chat/completions
-  - cerebras:  https://api.cerebras.ai/v1/chat/completions
+Providers suportados:
+  - groq      https://api.groq.com/openai/v1/chat/completions
+  - cerebras  https://api.cerebras.ai/v1/chat/completions
+  - gemini    https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
 
 Comportamento:
-  - chat() tenta o LLM_PROVIDER primario
-  - se receber 429 (rate limit/cota) E houver fallback configurado,
-    re-tenta automaticamente no LLM_FALLBACK_PROVIDER
+  chat() tenta os providers da chain (LLM_CHAIN) em ordem.
+  Se um da 429 (cota), tenta o proximo. Se todos falharem por cota,
+  propaga LLMRateLimitError com mensagem agregada.
+  Erros que nao sao 429 sao tambem encadeados (tenta proximo).
 """
 from __future__ import annotations
 
@@ -17,9 +19,11 @@ import httpx
 
 from .config import get_settings
 
-PROVIDERS = {
+# URLs OpenAI-compativeis de cada provider
+PROVIDERS_URL = {
     "groq":     "https://api.groq.com/openai/v1/chat/completions",
     "cerebras": "https://api.cerebras.ai/v1/chat/completions",
+    "gemini":   "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
 }
 
 
@@ -36,7 +40,6 @@ class LLMRateLimitError(LLMError):
 
 
 def _parse_retry_after(body_text: str, headers) -> int | None:
-    """Extrai 'try again in 42m21s' ou Retry-After dos headers."""
     m = re.search(r"in (\d+)m(\d+)", body_text or "")
     if m:
         return int(m.group(1)) * 60 + int(m.group(2))
@@ -55,9 +58,9 @@ async def _call_provider(
     max_tokens: int,
     response_format: dict | None,
 ) -> str:
-    if provider not in PROVIDERS:
+    if provider not in PROVIDERS_URL:
         raise LLMError(f"Provider desconhecido: {provider}")
-    url = PROVIDERS[provider]
+    url = PROVIDERS_URL[provider]
 
     payload: dict = {
         "model": model,
@@ -82,7 +85,7 @@ async def _call_provider(
             body_text = e.response.text or ""
             if status == 429:
                 raise LLMRateLimitError(
-                    f"{provider}: cota da IA esgotada por enquanto.",
+                    f"{provider}: cota esgotada por enquanto.",
                     retry_after_seconds=_parse_retry_after(body_text, e.response.headers),
                 ) from e
             raise LLMError(
@@ -106,48 +109,61 @@ async def chat(
     max_tokens: int = 2000,
     response_format: dict | None = None,
 ) -> str:
-    """Tenta provider primario; se 429, tenta fallback (se configurado)."""
+    """Tenta cada provider da chain em ordem. Pula os sem api_key configurada."""
     settings = get_settings()
+    chain = settings.get_chain()
 
-    try:
-        return await _call_provider(
-            provider=settings.llm_provider,
-            model=settings.llm_model,
-            api_key=settings.llm_api_key,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            response_format=response_format,
+    errors: list[LLMError] = []
+    rate_limit_hits: list[LLMRateLimitError] = []
+    skipped_no_key: list[str] = []
+
+    for provider in chain:
+        api_key, model = settings.get_provider_config(provider)
+        if not api_key:
+            skipped_no_key.append(provider)
+            continue
+        try:
+            return await _call_provider(
+                provider=provider,
+                model=model,
+                api_key=api_key,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format=response_format,
+            )
+        except LLMRateLimitError as e:
+            rate_limit_hits.append(e)
+            continue  # tenta proximo da cadeia
+        except LLMError as e:
+            errors.append(e)
+            continue  # tenta proximo da cadeia
+
+    # Todos os providers falharam.
+    if rate_limit_hits and not errors:
+        # Todos sao rate-limit -> erro de cota agregado
+        retry = next(
+            (e.retry_after_seconds for e in rate_limit_hits if e.retry_after_seconds),
+            None,
         )
-    except LLMRateLimitError as primary_error:
-        # Se ha fallback configurado, tenta nele
-        if (
-            settings.llm_fallback_provider
-            and settings.llm_fallback_api_key
-            and settings.llm_fallback_model
-        ):
-            try:
-                return await _call_provider(
-                    provider=settings.llm_fallback_provider,
-                    model=settings.llm_fallback_model,
-                    api_key=settings.llm_fallback_api_key,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    response_format=response_format,
-                )
-            except LLMRateLimitError as fallback_error:
-                # Ambos rate-limited
-                retry = (
-                    primary_error.retry_after_seconds
-                    or fallback_error.retry_after_seconds
-                )
-                raise LLMRateLimitError(
-                    "Ambos os provedores de IA estao com cota esgotada agora.",
-                    retry_after_seconds=retry,
-                )
-            except LLMError as fallback_error:
-                # Fallback falhou por outro motivo: reporta o erro primario
-                raise primary_error from fallback_error
-        # sem fallback configurado: propaga o erro primario
-        raise
+        nomes = ", ".join(chain)
+        raise LLMRateLimitError(
+            f"Todos os provedores de IA configurados ({nomes}) estao sem cota agora.",
+            retry_after_seconds=retry,
+        )
+
+    if skipped_no_key and not errors and not rate_limit_hits:
+        raise LLMError(
+            "Nenhum provider LLM configurado tem API key. "
+            f"Configure ao menos um dos: {', '.join(chain)} no .env",
+        )
+
+    # Houve erros nao-429: reporta o primeiro com contexto da cadeia
+    if errors:
+        primeiro = errors[0]
+        raise LLMError(
+            f"Todos providers da cadeia falharam. Primeiro erro: {primeiro}",
+            kind=primeiro.kind,
+        )
+
+    raise LLMError("LLM chain vazia ou todos providers sem credenciais.")

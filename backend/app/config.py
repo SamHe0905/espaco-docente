@@ -21,15 +21,46 @@ class Settings(BaseSettings):
     supabase_anon_key: str
     supabase_service_key: str
 
-    # LLM — provider primario
-    llm_provider: str = "groq"  # 'groq' ou 'cerebras'
-    llm_model: str = "llama-3.3-70b-versatile"
-    llm_api_key: str
+    # ---- LLM em cadeia ----
+    # Define a ordem dos providers tentados. Ex: "groq,cerebras,gemini"
+    # Quando um da 429 (rate limit), tenta o proximo da fila automaticamente.
+    llm_chain: str = "groq"
 
-    # LLM — provider fallback opcional (usado em caso de rate limit no primario)
-    llm_fallback_provider: str | None = None  # ex 'cerebras'
-    llm_fallback_model: str | None = None     # ex 'llama-3.3-70b'
-    llm_fallback_api_key: str | None = None
+    # Cada provider tem chave + modelo proprio (todos opcionais).
+    llm_groq_api_key: str | None = None
+    llm_groq_model: str = "llama-3.3-70b-versatile"
+
+    llm_cerebras_api_key: str | None = None
+    llm_cerebras_model: str = "llama-3.3-70b"
+
+    llm_gemini_api_key: str | None = None
+    llm_gemini_model: str = "gemini-2.0-flash-lite"
+
+    # --- compat retroativo (deprecated) ---
+    # Se llm_chain="groq" e llm_groq_api_key vazia, usa estes:
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    llm_api_key: str | None = None
+
+    def get_chain(self) -> list[str]:
+        items = [p.strip().lower() for p in self.llm_chain.split(",") if p.strip()]
+        return items or ["groq"]
+
+    def get_provider_config(self, provider: str) -> tuple[str | None, str]:
+        """Retorna (api_key, model) pro provider. Aplica compat retroativo."""
+        p = provider.lower()
+        if p == "groq":
+            key = self.llm_groq_api_key or (
+                self.llm_api_key
+                if (self.llm_provider or "groq").lower() == "groq"
+                else None
+            )
+            return (key, self.llm_groq_model)
+        if p == "cerebras":
+            return (self.llm_cerebras_api_key, self.llm_cerebras_model)
+        if p == "gemini":
+            return (self.llm_gemini_api_key, self.llm_gemini_model)
+        return (None, "")
 
     # Embeddings
     embedding_model: str = "BAAI/bge-m3"
