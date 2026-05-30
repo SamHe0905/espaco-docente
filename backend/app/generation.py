@@ -128,14 +128,19 @@ async def gerar(req: GenerateRequest) -> GenerateResponse:
     raw = await chat(messages, temperature=0.6, max_tokens=2200)
 
     # 3. valida
-    aulas, problemas = parse_llm_output(raw, len(req.aulas), req.modo)
+    # Se recomposicao em modo atividades, usamos a faixa de palavras maior
+    # (lista de exercicios) ao validar.
+    modo_validacao = req.modo
+    if req.modo == "recomposicao_paralela" and (req.tipo_recomposicao or "aula") == "atividades":
+        modo_validacao = "lista_de_exercicios"
+    aulas, problemas = parse_llm_output(raw, len(req.aulas), modo_validacao)
 
     # 4. retry uma vez se houver problemas
     if problemas and aulas:
         retry_msgs = build_retry_message(raw, problemas)
         try:
             raw2 = await chat(retry_msgs, temperature=0.35, max_tokens=2200)
-            aulas2, problemas2 = parse_llm_output(raw2, len(req.aulas), req.modo)
+            aulas2, problemas2 = parse_llm_output(raw2, len(req.aulas), modo_validacao)
             # so substitui se o retry diminuiu problemas
             if len(problemas2) < len(problemas):
                 aulas = aulas2

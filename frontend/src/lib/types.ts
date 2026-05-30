@@ -50,6 +50,7 @@ export interface GenerateRequest {
   // Recomposição
   lacuna_aprendizagem?: string;
   nivel_defasagem?: string;
+  tipo_recomposicao?: string; // 'aula' | 'atividades'
   // Adaptação
   adaptacao_necessaria?: string;
   tipo_necessidade?: string;

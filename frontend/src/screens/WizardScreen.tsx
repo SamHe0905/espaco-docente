@@ -2,6 +2,7 @@ import { useMemo, useReducer, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../components/ui/Button";
 import { Input, Select, Textarea } from "../components/ui/Field";
+import { RadioGroup } from "../components/ui/RadioGroup";
 import { StepBlock } from "../components/ui/StepBlock";
 import { HabilidadeBox } from "../components/HabilidadeBox";
 import { AulaInputRow } from "../components/AulaInput";
@@ -14,6 +15,7 @@ import {
   MODO_BY_ID,
   SERIES_POR_ETAPA,
   WIZARD_CONFIG_POR_MODO,
+  getEffectiveWizardConfig,
 } from "../lib/constants";
 import { api, ApiError } from "../lib/api";
 import { historico } from "../lib/storage";
@@ -132,10 +134,17 @@ interface Props {
 }
 
 export function WizardScreen({ modo, onVoltar }: Props) {
-  const config = WIZARD_CONFIG_POR_MODO[modo];
   const modoInfo = MODO_BY_ID[modo];
 
   const [state, dispatch] = useReducer(reducer, undefined, makeInitialState);
+  // config efetiva muda conforme alguns extras (ex.: recomp atividades vs aula)
+  const config = useMemo(
+    () => getEffectiveWizardConfig(modo, state.extras),
+    [modo, state.extras],
+  );
+  // referencia estavel ao base config para validacoes nao dependentes de extras
+  // (mantida apenas pra eslint)
+  void WIZARD_CONFIG_POR_MODO;
   const [resultado, setResultado] = useState<GenerateResponse | null>(null);
   const [requestUsado, setRequestUsado] = useState<GenerateRequest | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -229,6 +238,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
       // recomp
       lacuna_aprendizagem: extras.lacuna_aprendizagem || undefined,
       nivel_defasagem: extras.nivel_defasagem || undefined,
+      tipo_recomposicao: extras.tipo_recomposicao || undefined,
       // adapt
       adaptacao_necessaria: extras.adaptacao_necessaria || undefined,
       tipo_necessidade: extras.tipo_necessidade || undefined,
@@ -260,6 +270,9 @@ export function WizardScreen({ modo, onVoltar }: Props) {
   }
 
   function renderCampoExtra(c: typeof config.camposExtras[number]) {
+    // Visibilidade condicional
+    if (c.mostrarSe && !c.mostrarSe(state.extras)) return null;
+
     const v = state.extras[c.key] ?? "";
     const setV = (val: string) =>
       dispatch({ type: "set-extra", key: c.key, value: val });
@@ -314,6 +327,20 @@ export function WizardScreen({ modo, onVoltar }: Props) {
             max={c.max}
             value={valor}
             onChange={(e) => setV(e.target.value)}
+          />
+        );
+      }
+      case "radio": {
+        const valor = v !== "" ? v : c.defaultValue ?? "";
+        return (
+          <RadioGroup
+            key={c.key}
+            label={labelComObrig}
+            hint={c.hint}
+            value={valor}
+            onChange={setV}
+            options={c.options}
+            name={c.key}
           />
         );
       }

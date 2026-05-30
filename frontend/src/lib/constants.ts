@@ -189,11 +189,37 @@ export interface WizardConfig {
   camposExtras: CampoExtra[];
 }
 
+// Visibilidade condicional baseada em outros campos do form
+export type MostrarSe = (extras: Record<string, string>) => boolean;
+
 export type CampoExtra =
-  | { tipo: "input"; key: string; label: string; hint?: string; placeholder?: string; obrigatorio?: boolean }
-  | { tipo: "textarea"; key: string; label: string; hint?: string; placeholder?: string; rows?: number; obrigatorio?: boolean }
-  | { tipo: "select"; key: string; label: string; hint?: string; options: { value: string; label: string }[]; obrigatorio?: boolean }
-  | { tipo: "number"; key: string; label: string; hint?: string; min?: number; max?: number; defaultValue?: number };
+  | ({ tipo: "input"; key: string; label: string; hint?: string; placeholder?: string; obrigatorio?: boolean; mostrarSe?: MostrarSe })
+  | ({ tipo: "textarea"; key: string; label: string; hint?: string; placeholder?: string; rows?: number; obrigatorio?: boolean; mostrarSe?: MostrarSe })
+  | ({ tipo: "select"; key: string; label: string; hint?: string; options: { value: string; label: string }[]; obrigatorio?: boolean; mostrarSe?: MostrarSe })
+  | ({ tipo: "number"; key: string; label: string; hint?: string; min?: number; max?: number; defaultValue?: number; mostrarSe?: MostrarSe })
+  | ({ tipo: "radio"; key: string; label: string; hint?: string; options: { value: string; label: string; description?: string }[]; defaultValue?: string; mostrarSe?: MostrarSe });
+
+/**
+ * Retorna a config efetiva do wizard considerando seleções do usuário
+ * (por exemplo: recomposição-atividades não pede aulas com data).
+ */
+export function getEffectiveWizardConfig(
+  modo: Modo,
+  extras: Record<string, string>,
+): WizardConfig {
+  const base = WIZARD_CONFIG_POR_MODO[modo];
+  // Recomposição: se atividades, vira lista — sem datas, label "Lista de atividades"
+  if (modo === "recomposicao_paralela" && extras.tipo_recomposicao === "atividades") {
+    return {
+      ...base,
+      tituloAcao: "Gerar atividades",
+      rotuloAulasSection: "Lista de atividades",
+      subtituloAulas: "uma lista por geração",
+      precisaAulasComData: false,
+    };
+  }
+  return base;
+}
 
 export const WIZARD_CONFIG_POR_MODO: Record<Modo, WizardConfig> = {
   plano_de_aula: {
@@ -299,6 +325,24 @@ export const WIZARD_CONFIG_POR_MODO: Record<Modo, WizardConfig> = {
     mostrarObservacoesTurma: true,
     camposExtras: [
       {
+        tipo: "radio",
+        key: "tipo_recomposicao",
+        label: "O que você quer gerar?",
+        defaultValue: "aula",
+        options: [
+          {
+            value: "aula",
+            label: "Aulas de recomposição",
+            description: "Roteiros de aulas para retomar conceitos com a turma toda ou em grupos",
+          },
+          {
+            value: "atividades",
+            label: "Lista de atividades",
+            description: "Exercícios práticos para os estudantes resolverem (em casa, sala de apoio, dever extra)",
+          },
+        ],
+      },
+      {
         tipo: "textarea",
         key: "lacuna_aprendizagem",
         label: "Lacuna de aprendizagem identificada",
@@ -316,6 +360,28 @@ export const WIZARD_CONFIG_POR_MODO: Record<Modo, WizardConfig> = {
           { value: "media", label: "Média — bloco curricular do ano anterior" },
           { value: "grave", label: "Grave — fundamentos de 2+ anos atrás" },
         ],
+      },
+      // Campos extras só aparecem se o professor escolheu 'atividades'
+      {
+        tipo: "number",
+        key: "quantidade_questoes",
+        label: "Quantidade de atividades",
+        hint: "5 a 15 atividades práticas",
+        min: 5,
+        max: 15,
+        defaultValue: 8,
+        mostrarSe: (e) => e.tipo_recomposicao === "atividades",
+      },
+      {
+        tipo: "select",
+        key: "tipo_questoes",
+        label: "Tipo de atividades",
+        options: [
+          { value: "objetivas", label: "Objetivas (múltipla escolha)" },
+          { value: "discursivas", label: "Discursivas" },
+          { value: "mista", label: "Mistas (objetivas + discursivas)" },
+        ],
+        mostrarSe: (e) => e.tipo_recomposicao === "atividades",
       },
     ],
   },

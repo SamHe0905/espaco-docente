@@ -72,6 +72,7 @@ class GenerateRequest(BaseModel):
     # Recomposicao paralela:
     lacuna_aprendizagem: str | None = None
     nivel_defasagem: str | None = None  # 'leve' | 'media' | 'grave'
+    tipo_recomposicao: str | None = None  # 'aula' (default) | 'atividades'
 
     # Adaptacao educacao especial:
     adaptacao_necessaria: str | None = None  # texto livre

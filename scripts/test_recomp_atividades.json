@@ -1,0 +1,14 @@
+{
+  "modo": "recomposicao_paralela",
+  "tipo_recomposicao": "atividades",
+  "etapa": "Ensino Fundamental",
+  "serie": "7 ano",
+  "disciplina": "Matematica",
+  "tema": "Fracoes e proporcao",
+  "codigos_bncc": ["EF07MA23"],
+  "aulas": [{"data": "2026-06-12"}],
+  "lacuna_aprendizagem": "Dificuldade para interpretar problemas com fracao em situacoes do cotidiano",
+  "nivel_defasagem": "media",
+  "quantidade_questoes": 6,
+  "tipo_questoes": "mista"
+}

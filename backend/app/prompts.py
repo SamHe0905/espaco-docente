@@ -105,9 +105,15 @@ Entregável: [o que os estudantes produzem ao fim desta etapa]
 Etapas típicas (use como guia): 1) Sensibilização e pergunta-problema, 2) Pesquisa e levantamento, 3) Planejamento, 4) Execução/produção, 5) Apresentação e avaliação.
 """,
     # ------------------------------------------------------------------
-    "recomposicao_paralela": """MODO: RECOMPOSIÇÃO PARALELA (foco na lacuna de aprendizagem).
+    "recomposicao_paralela": """MODO: RECOMPOSIÇÃO PARALELA (foco na LACUNA DE APRENDIZAGEM).
 
-CORPO de cada aula: UM PARÁGRAFO de 50 a 80 palavras descrevendo atividade específica para trabalhar a LACUNA informada, com retomada de conceitos básicos antes da progressão.
+Este modo tem DUAS variantes possíveis, escolhidas pelo professor em 'Preferências':
+- tipo_recomposicao = 'aula' (padrão): gera AULAS de recomposição
+- tipo_recomposicao = 'atividades': gera LISTA DE ATIVIDADES práticas
+
+--- VARIANTE 'aula' (padrão) ---
+
+CORPO de cada aula: UM PARÁGRAFO de 50 a 80 palavras descrevendo atividade pedagógica para trabalhar a LACUNA informada, com retomada de conceitos básicos antes da progressão.
 
 Sem labels nem bullets. Descreva a atividade concreta, o suporte do professor e o critério de avanço.
 
@@ -115,6 +121,29 @@ EXEMPLO:
 
 Aula 1 – EF07MA23 – 12/06
 A aula retomará os conceitos de fração e proporção com material concreto (tiras de papel e recipientes graduados), partindo de situações cotidianas familiares aos estudantes. O professor acompanhará individualmente as duplas com mais dificuldade, sugerindo registros pictóricos antes da notação simbólica e propondo desafios graduais conforme o avanço de cada grupo.
+
+--- VARIANTE 'atividades' ---
+
+CORPO de cada aula: LISTA DE 5 a 10 exercícios práticos focados em vencer a LACUNA informada, com progressão de fácil para mais desafiador, seguidos de GABARITO.
+
+Inclua ao menos 2 questões DISCURSIVAS com resposta esperada no gabarito (para o professor avaliar compreensão), além das objetivas.
+
+Formato exato:
+
+Aula 1 – EF07MA23 – 12/06
+
+1. [enunciado simples e direto, retomando conceito basico]
+a) ...
+b) ...
+c) ...
+d) ...
+
+2. [enunciado de mesmo nivel basico]
+...
+
+(progressao do mais facil para o mais desafiador; misture objetivas e discursivas)
+
+Gabarito: 1-b, 2-a, 3-(discursiva: resposta esperada em ate 30 palavras), ...
 """,
     # ------------------------------------------------------------------
     "adaptacao_educacao_especial": """MODO: ADAPTAÇÃO PARA EDUCAÇÃO ESPECIAL.
@@ -185,6 +214,8 @@ def build_messages(req: GenerateRequest, hits: list[CurriculumHit]) -> list[dict
         pref_lines.append(f"- LACUNA DE APRENDIZAGEM: {req.lacuna_aprendizagem}")
     if req.nivel_defasagem:
         pref_lines.append(f"- Nível de defasagem: {req.nivel_defasagem}")
+    if req.tipo_recomposicao:
+        pref_lines.append(f"- tipo_recomposicao: {req.tipo_recomposicao}")
 
     # Adaptacao
     if req.tipo_necessidade:
