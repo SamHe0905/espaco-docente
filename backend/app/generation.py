@@ -119,6 +119,27 @@ def parse_llm_output(
 
 
 async def gerar(req: GenerateRequest) -> GenerateResponse:
+    from . import cache as cache_mod
+
+    # 0. Cache (a menos que o professor tenha pedido regerar)
+    cached_hash = ""
+    if not req.force_regenerate:
+        if cache_mod.cache_pode_usar(req.modo):
+            cached, cached_hash = cache_mod.cache_lookup_exato(req)
+            if cached:
+                cache_mod.metric_exato_hit()
+                cached.fonte = "cache_exato"
+                return cached
+            # tenta semantico se modo permite
+            cached_sem = cache_mod.cache_lookup_semantico(req)
+            if cached_sem:
+                cache_mod.metric_semantico_hit()
+                cached_sem.fonte = "cache_semantico"
+                return cached_sem
+            cache_mod.metric_miss()
+        else:
+            cache_mod.metric_skip()
+
     # 1. RAG: monta o contexto curricular
     query = req.tema + (f" {req.foco_especifico}" if req.foco_especifico else "")
 
@@ -169,9 +190,16 @@ async def gerar(req: GenerateRequest) -> GenerateResponse:
         except LLMError:
             pass
 
-    return GenerateResponse(
+    resposta = GenerateResponse(
         modo=req.modo,
         tema=req.tema,
         aulas=aulas,
         habilidades_usadas=hits,
+        fonte="llm",
     )
+
+    # Persiste no cache pra requests futuros (so pra modos cacheaveis)
+    if cached_hash and not req.force_regenerate and aulas:
+        cache_mod.cache_save(req, resposta, cached_hash)
+
+    return resposta

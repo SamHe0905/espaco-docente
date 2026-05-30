@@ -21,12 +21,25 @@ interface ProviderStats {
     tpd?: number | null;
   };
 }
+interface CacheStats {
+  exato_hits: number;
+  semantico_hits: number;
+  misses: number;
+  skips_modo_sensivel: number;
+  total: number;
+  hit_rate_pct: number;
+}
+
 interface Snapshot {
   providers: Record<string, ProviderStats>;
+  cache?: CacheStats;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
-const REFRESH_MS = 10_000;
+// Polling enxuto pra economizar egress do Supabase:
+// 60s quando fechado, 10s quando expandido.
+const REFRESH_MS_CLOSED = 60_000;
+const REFRESH_MS_OPEN = 10_000;
 
 const PROVIDER_LABEL: Record<string, string> = {
   groq: "Groq",
@@ -64,12 +77,13 @@ export function UsageMeter() {
       }
     }
     poll();
-    const id = setInterval(poll, REFRESH_MS);
+    const interval = expandido ? REFRESH_MS_OPEN : REFRESH_MS_CLOSED;
+    const id = setInterval(poll, interval);
     return () => {
       cancelado = true;
       clearInterval(id);
     };
-  }, []);
+  }, [expandido]);
 
   if (!snap) return null;
   const providers = Object.entries(snap.providers);
@@ -134,9 +148,29 @@ export function UsageMeter() {
                 Uso da IA
               </h3>
               <span className="text-[10px] text-neutral-400">
-                atualiza a cada {REFRESH_MS / 1000}s
+                atualiza a cada {REFRESH_MS_OPEN / 1000}s
               </span>
             </header>
+
+            {/* Bloco de cache: porcentagem de reaproveitamento */}
+            {snap.cache && snap.cache.total > 0 && (
+              <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2">
+                <div className="flex items-baseline justify-between gap-1 text-[11px]">
+                  <span className="font-semibold uppercase tracking-wide text-emerald-800">
+                    Cache
+                  </span>
+                  <span className="font-bold text-emerald-700">
+                    {snap.cache.hit_rate_pct}% reaproveitado
+                  </span>
+                </div>
+                <p className="mt-1 text-[10px] text-emerald-700/80">
+                  {snap.cache.exato_hits + snap.cache.semantico_hits} hits
+                  {snap.cache.misses > 0 && ` / ${snap.cache.misses} misses`}
+                  {snap.cache.skips_modo_sensivel > 0 &&
+                    ` / ${snap.cache.skips_modo_sensivel} sempre-gera`}
+                </p>
+              </div>
+            )}
             <ul className="space-y-3">
               {providers.map(([name, s]) => (
                 <li key={name} className="rounded-lg bg-neutral-50/60 p-2">

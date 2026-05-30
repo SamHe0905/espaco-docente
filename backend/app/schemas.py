@@ -89,6 +89,9 @@ class GenerateRequest(BaseModel):
     produto_final: str | None = None         # ex 'apresentacao', 'banner', 'video'
     publico_apresentacao: str | None = None  # ex 'turma', 'escola', 'familias'
 
+    # Forca regeracao sem usar cache (botao "Regerar" no frontend)
+    force_regenerate: bool = False
+
     @field_validator("aulas")
     @classmethod
     def _max5(cls, v):
@@ -127,6 +130,8 @@ class GenerateResponse(BaseModel):
         "Sugestão gerada por IA. O professor é responsável pela validação "
         "pedagógica antes do uso em sala de aula."
     )
+    # Origem da resposta: 'llm', 'cache_exato', 'cache_semantico'
+    fonte: str = "llm"
 
 
 # ---------------------------------------------------------------------------

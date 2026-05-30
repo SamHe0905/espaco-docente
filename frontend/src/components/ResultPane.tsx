@@ -4,9 +4,12 @@ import {
   AlertTriangle,
   Check,
   Copy,
+  Database,
   FileDown,
   FileText,
   Loader2,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
@@ -27,6 +30,7 @@ interface Props {
   resultado: GenerateResponse | null;
   requestUsado: GenerateRequest | null;
   gerando: boolean;
+  onRegerar?: () => void;
 }
 
 function formataData(iso: string): string {
@@ -41,7 +45,7 @@ function calcCargaHoraria(qtd: number, minutosPorAula = 50): string {
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}min`;
 }
 
-export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
+export function ResultPane({ modo, resultado, requestUsado, gerando, onRegerar }: Props) {
   const [copiado, setCopiado] = useState(false);
   const [salvandoExport, setSalvandoExport] = useState<null | "word" | "pdf">(null);
 
@@ -104,6 +108,17 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {onRegerar && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onRegerar}
+              icon={<RefreshCw className="h-4 w-4" />}
+              title="Gerar uma versão nova sem usar cache"
+            >
+              Regerar
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={handleCopiar}
@@ -140,6 +155,19 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
         {requestUsado.codigo_bncc && (
           <Badge tone="brand">Habilidade: {requestUsado.codigo_bncc}</Badge>
         )}
+        {resultado.fonte && resultado.fonte !== "llm" ? (
+          <Badge tone="success">
+            <Database className="mr-1 inline h-3 w-3" />
+            {resultado.fonte === "cache_exato"
+              ? "Reaproveitado"
+              : "Reaproveitado (similar)"}
+          </Badge>
+        ) : resultado.fonte === "llm" ? (
+          <Badge tone="info">
+            <Sparkles className="mr-1 inline h-3 w-3" />
+            Gerado agora
+          </Badge>
+        ) : null}
         {modo === "projetos_e_trabalhos" ? (
           <Badge tone="info">Esqueleto de projeto</Badge>
         ) : (

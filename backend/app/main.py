@@ -49,8 +49,11 @@ def health() -> dict:
 
 @app.get("/llm-usage")
 def get_llm_usage() -> dict:
-    """Snapshot atual do uso dos providers LLM (TPM/RPM/TPD/RPD)."""
-    return usage_tracker.snapshot()
+    """Snapshot atual do uso dos providers LLM (TPM/RPM/TPD/RPD) e cache."""
+    from .cache import metrics_snapshot as cache_metrics
+    snap = usage_tracker.snapshot()
+    snap["cache"] = cache_metrics()
+    return snap
 
 
 @app.post("/search-bncc", response_model=SearchBNCCResponse)

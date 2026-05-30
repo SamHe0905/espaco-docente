@@ -63,6 +63,8 @@ export interface GenerateRequest {
   duracao_projeto?: string;
   produto_final?: string;
   publico_apresentacao?: string;
+  // Bypass cache
+  force_regenerate?: boolean;
 }
 
 export interface AulaOutput {
@@ -79,6 +81,7 @@ export interface GenerateResponse {
   aulas: AulaOutput[];
   habilidades_usadas: CurriculumHit[];
   aviso: string;
+  fonte?: "llm" | "cache_exato" | "cache_semantico";
 }
 
 // Histórico salvo no localStorage

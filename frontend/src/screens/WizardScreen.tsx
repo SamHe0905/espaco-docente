@@ -230,7 +230,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
     }
   }
 
-  async function gerar() {
+  async function gerar(opts?: { forceRegenerate?: boolean }) {
     setErro(null);
     setGerando(true);
     setResultado(null);
@@ -289,6 +289,8 @@ export function WizardScreen({ modo, onVoltar }: Props) {
       duracao_projeto: extras.duracao_projeto || undefined,
       produto_final: extras.produto_final || undefined,
       publico_apresentacao: extras.publico_apresentacao || undefined,
+      // bypass de cache se professor clicou Regerar
+      force_regenerate: opts?.forceRegenerate || undefined,
     };
 
     try {
@@ -803,7 +805,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
             <Button
               variant="primary"
               size="lg"
-              onClick={gerar}
+              onClick={() => gerar()}
               loading={gerando}
               disabled={!podeGerar}
               className="flex-1"
@@ -831,6 +833,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
             resultado={resultado}
             requestUsado={requestUsado}
             gerando={gerando}
+            onRegerar={resultado ? () => gerar({ forceRegenerate: true }) : undefined}
           />
         </div>
       </div>
