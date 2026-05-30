@@ -67,8 +67,26 @@ class GenerateRequest(BaseModel):
     metodologia: str | None = None
     recursos: str | None = None
     observacoes_turma: str | None = None
-    adaptacao_necessaria: str | None = None  # so usado pelo modo adaptacao
-    lacuna_aprendizagem: str | None = None    # so usado pelo modo recomposicao
+
+    # Campos especificos por modo (todos opcionais; relevantes so em alguns modos)
+    # Recomposicao paralela:
+    lacuna_aprendizagem: str | None = None
+    nivel_defasagem: str | None = None  # 'leve' | 'media' | 'grave'
+
+    # Adaptacao educacao especial:
+    adaptacao_necessaria: str | None = None  # texto livre
+    tipo_necessidade: str | None = None      # ex 'TEA', 'TDAH', 'Def. Visual'
+    apoios_disponiveis: str | None = None
+
+    # Lista de exercicios:
+    quantidade_questoes: int | None = None   # 5..30
+    dificuldade: str | None = None           # 'basico' | 'intermediario' | 'avancado' | 'misto'
+    tipo_questoes: str | None = None         # 'objetivas' | 'discursivas' | 'mista'
+
+    # Projetos e trabalhos:
+    duracao_projeto: str | None = None       # ex '4 semanas'
+    produto_final: str | None = None         # ex 'apresentacao', 'banner', 'video'
+    publico_apresentacao: str | None = None  # ex 'turma', 'escola', 'familias'
 
     @field_validator("aulas")
     @classmethod

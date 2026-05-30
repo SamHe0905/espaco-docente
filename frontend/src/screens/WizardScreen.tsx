@@ -13,6 +13,7 @@ import {
   EXEMPLOS_TEMA_POR_DISCIPLINA,
   MODO_BY_ID,
   SERIES_POR_ETAPA,
+  WIZARD_CONFIG_POR_MODO,
 } from "../lib/constants";
 import { api, ApiError } from "../lib/api";
 import { historico } from "../lib/storage";
@@ -30,19 +31,20 @@ interface FormState {
   disciplina: string;
   tema: string;
   foco_especifico: string;
-  codigoBuscaInput: string; // o que o user digitou no campo, antes de "Buscar"
-  habilidadesSelecionadas: CurriculumHit[]; // lista de habilidades selecionadas
+  codigoBuscaInput: string;
+  habilidadesSelecionadas: CurriculumHit[];
   buscandoBNCC: boolean;
   aulas: AulaInputT[];
   metodologia: string;
   recursos: string;
   observacoes_turma: string;
-  adaptacao_necessaria: string;
-  lacuna_aprendizagem: string;
+  // mapa flexivel pros campos extras
+  extras: Record<string, string>;
 }
 
 type Action =
-  | { type: "set"; field: keyof FormState; value: string }
+  | { type: "set"; field: keyof Omit<FormState, "extras">; value: string }
+  | { type: "set-extra"; key: string; value: string }
   | { type: "add-habilidade"; hit: CurriculumHit }
   | { type: "remove-habilidade"; codigo: string }
   | { type: "limpar-habilidades" }
@@ -67,8 +69,7 @@ function makeInitialState(): FormState {
     metodologia: "",
     recursos: "",
     observacoes_turma: "",
-    adaptacao_necessaria: "",
-    lacuna_aprendizagem: "",
+    extras: {},
   };
 }
 
@@ -76,6 +77,11 @@ function reducer(state: FormState, action: Action): FormState {
   switch (action.type) {
     case "set":
       return { ...state, [action.field]: action.value };
+    case "set-extra":
+      return {
+        ...state,
+        extras: { ...state.extras, [action.key]: action.value },
+      };
     case "add-habilidade": {
       if (state.habilidadesSelecionadas.some((h) => h.codigo === action.hit.codigo))
         return state;
@@ -126,15 +132,14 @@ interface Props {
 }
 
 export function WizardScreen({ modo, onVoltar }: Props) {
+  const config = WIZARD_CONFIG_POR_MODO[modo];
+  const modoInfo = MODO_BY_ID[modo];
+
   const [state, dispatch] = useReducer(reducer, undefined, makeInitialState);
   const [resultado, setResultado] = useState<GenerateResponse | null>(null);
   const [requestUsado, setRequestUsado] = useState<GenerateRequest | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
-
-  const modoInfo = MODO_BY_ID[modo];
-  const precisaLacuna = modoInfo.precisa?.includes("lacuna");
-  const precisaAdaptacao = modoInfo.precisa?.includes("adaptacao");
 
   const seriesDisponiveis = useMemo(
     () => (state.etapa ? SERIES_POR_ETAPA[state.etapa] || [] : []),
@@ -150,14 +155,21 @@ export function WizardScreen({ modo, onVoltar }: Props) {
     [state.disciplina],
   );
 
+  // Validacao: campos extras obrigatorios precisam estar preenchidos
+  const extrasObrigatoriosOk = config.camposExtras
+    .filter((c) => "obrigatorio" in c && c.obrigatorio)
+    .every((c) => {
+      const v = state.extras[c.key];
+      return v !== undefined && String(v).trim().length > 0;
+    });
+
   const podeGerar =
     !!state.etapa &&
     !!state.disciplina &&
     state.tema.trim().length >= 2 &&
     state.aulas.length >= 1 &&
-    state.aulas.every((a) => a.data) &&
-    (!precisaLacuna || state.lacuna_aprendizagem.trim().length > 0) &&
-    (!precisaAdaptacao || state.adaptacao_necessaria.trim().length > 0);
+    (!config.precisaAulasComData || state.aulas.every((a) => a.data)) &&
+    extrasObrigatoriosOk;
 
   async function buscarBNCC() {
     const termo = state.codigoBuscaInput.trim() || state.tema.trim();
@@ -188,6 +200,20 @@ export function WizardScreen({ modo, onVoltar }: Props) {
     setErro(null);
     setGerando(true);
     setResultado(null);
+
+    // Aulas: se modo nao precisa de aulas com data, mandamos 1 aula com data de hoje
+    const aulas = config.precisaAulasComData
+      ? state.aulas
+      : [{ data: new Date().toISOString().slice(0, 10) }];
+
+    // converte extras (strings) pros campos esperados pelo backend
+    const extras = state.extras;
+    const numExtra = (key: string): number | undefined => {
+      const v = extras[key];
+      const n = v ? parseInt(v) : NaN;
+      return Number.isFinite(n) ? n : undefined;
+    };
+
     const req: GenerateRequest = {
       modo,
       etapa: state.etapa,
@@ -196,13 +222,27 @@ export function WizardScreen({ modo, onVoltar }: Props) {
       tema: state.tema,
       foco_especifico: state.foco_especifico || undefined,
       codigos_bncc: state.habilidadesSelecionadas.map((h) => h.codigo),
-      aulas: state.aulas,
+      aulas,
       metodologia: state.metodologia || undefined,
       recursos: state.recursos || undefined,
       observacoes_turma: state.observacoes_turma || undefined,
-      adaptacao_necessaria: state.adaptacao_necessaria || undefined,
-      lacuna_aprendizagem: state.lacuna_aprendizagem || undefined,
+      // recomp
+      lacuna_aprendizagem: extras.lacuna_aprendizagem || undefined,
+      nivel_defasagem: extras.nivel_defasagem || undefined,
+      // adapt
+      adaptacao_necessaria: extras.adaptacao_necessaria || undefined,
+      tipo_necessidade: extras.tipo_necessidade || undefined,
+      apoios_disponiveis: extras.apoios_disponiveis || undefined,
+      // lista exerc
+      quantidade_questoes: numExtra("quantidade_questoes"),
+      dificuldade: extras.dificuldade || undefined,
+      tipo_questoes: extras.tipo_questoes || undefined,
+      // projetos
+      duracao_projeto: extras.duracao_projeto || undefined,
+      produto_final: extras.produto_final || undefined,
+      publico_apresentacao: extras.publico_apresentacao || undefined,
     };
+
     try {
       const r = await api.generate(req);
       setResultado(r);
@@ -212,10 +252,71 @@ export function WizardScreen({ modo, onVoltar }: Props) {
       setErro(
         e instanceof ApiError
           ? `Erro ${e.status}: ${e.message}`
-          : "Falha ao gerar planejamento. Tente novamente em instantes.",
+          : "Falha ao gerar. Tente novamente em instantes.",
       );
     } finally {
       setGerando(false);
+    }
+  }
+
+  function renderCampoExtra(c: typeof config.camposExtras[number]) {
+    const v = state.extras[c.key] ?? "";
+    const setV = (val: string) =>
+      dispatch({ type: "set-extra", key: c.key, value: val });
+    const labelComObrig =
+      "obrigatorio" in c && c.obrigatorio ? `${c.label} *` : c.label;
+
+    switch (c.tipo) {
+      case "input":
+        return (
+          <Input
+            key={c.key}
+            label={labelComObrig}
+            hint={c.hint}
+            placeholder={c.placeholder}
+            value={v}
+            onChange={(e) => setV(e.target.value)}
+          />
+        );
+      case "textarea":
+        return (
+          <Textarea
+            key={c.key}
+            label={labelComObrig}
+            hint={c.hint}
+            placeholder={c.placeholder}
+            rows={c.rows}
+            value={v}
+            onChange={(e) => setV(e.target.value)}
+          />
+        );
+      case "select":
+        return (
+          <Select
+            key={c.key}
+            label={labelComObrig}
+            hint={c.hint}
+            value={v}
+            placeholder="Selecione..."
+            options={c.options}
+            onChange={(e) => setV(e.target.value)}
+          />
+        );
+      case "number": {
+        const valor = v !== "" ? v : String(c.defaultValue ?? "");
+        return (
+          <Input
+            key={c.key}
+            label={labelComObrig}
+            hint={c.hint}
+            type="number"
+            min={c.min}
+            max={c.max}
+            value={valor}
+            onChange={(e) => setV(e.target.value)}
+          />
+        );
+      }
     }
   }
 
@@ -238,7 +339,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
               Novo {modoInfo.titulo.toLowerCase()}
             </h1>
             <p className="text-xs text-neutral-500">
-              Preencha os dados para gerar seu material.
+              {modoInfo.descricao}
             </p>
           </div>
         </div>
@@ -294,7 +395,6 @@ export function WizardScreen({ modo, onVoltar }: Props) {
             <Input
               label="Foco específico (opcional)"
               hint="Ex: aspectos econômicos, impactos no Brasil…"
-              placeholder=""
               value={state.foco_especifico}
               onChange={(e) =>
                 dispatch({
@@ -371,116 +471,124 @@ export function WizardScreen({ modo, onVoltar }: Props) {
             )}
           </StepBlock>
 
-          {/* 4. Aulas */}
-          <StepBlock
-            numero={4}
-            titulo="Aulas"
-            subtitulo={`Até 5 aulas por vez (${state.aulas.length}/5)`}
-          >
-            <div className="space-y-2">
-              {state.aulas.map((a, i) => (
-                <AulaInputRow
-                  key={i}
-                  numero={i + 1}
-                  aula={a}
-                  onChange={(next) =>
-                    dispatch({ type: "set-aula", index: i, aula: next })
-                  }
-                  onRemove={
-                    state.aulas.length > 1
-                      ? () => dispatch({ type: "remove-aula", index: i })
-                      : undefined
+          {/* 4. Aulas / Etapas / Configurações da lista */}
+          {config.precisaAulasComData ? (
+            <StepBlock
+              numero={4}
+              titulo={config.rotuloAulasSection}
+              subtitulo={`${config.subtituloAulas} (${state.aulas.length}/5)`}
+            >
+              <div className="space-y-2">
+                {state.aulas.map((a, i) => (
+                  <AulaInputRow
+                    key={i}
+                    numero={i + 1}
+                    aula={a}
+                    onChange={(next) =>
+                      dispatch({ type: "set-aula", index: i, aula: next })
+                    }
+                    onRemove={
+                      state.aulas.length > 1
+                        ? () => dispatch({ type: "remove-aula", index: i })
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+              {state.aulas.length < 5 && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => dispatch({ type: "add-aula" })}
+                  className="w-full justify-center"
+                >
+                  + Adicionar {config.rotuloAulasSection.toLowerCase().includes("etapa") ? "etapa" : "aula"}
+                </Button>
+              )}
+            </StepBlock>
+          ) : (
+            // Sem aulas com data — mostramos apenas os campos extras desse modo
+            config.camposExtras.length > 0 && (
+              <StepBlock
+                numero={4}
+                titulo={config.rotuloAulasSection}
+                subtitulo={config.subtituloAulas}
+              >
+                {config.camposExtras.map((c) => renderCampoExtra(c))}
+              </StepBlock>
+            )
+          )}
+
+          {/* 5. Campos extras + preferencias (quando ha aulas) */}
+          {(config.precisaAulasComData && config.camposExtras.length > 0) && (
+            <StepBlock
+              numero={5}
+              titulo="Detalhes do material"
+              subtitulo="campos específicos deste modo"
+            >
+              {config.camposExtras.map((c) => renderCampoExtra(c))}
+            </StepBlock>
+          )}
+
+          {/* Preferencias gerais (se houver algum campo a mostrar) */}
+          {(config.mostrarMetodologia ||
+            config.mostrarRecursos ||
+            config.mostrarObservacoesTurma) && (
+            <StepBlock
+              numero={
+                (config.precisaAulasComData ? 5 : 5) +
+                (config.precisaAulasComData && config.camposExtras.length > 0 ? 1 : 0)
+              }
+              titulo="Preferências gerais"
+              subtitulo="opcional, mas melhora a qualidade"
+            >
+              {config.mostrarMetodologia && (
+                <Input
+                  label="Metodologia desejada"
+                  hint="Ex: aula expositiva, sala invertida, projetos…"
+                  value={state.metodologia}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "set",
+                      field: "metodologia",
+                      value: e.target.value,
+                    })
                   }
                 />
-              ))}
-            </div>
-            {state.aulas.length < 5 && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => dispatch({ type: "add-aula" })}
-                className="w-full justify-center"
-              >
-                + Adicionar aula
-              </Button>
-            )}
-          </StepBlock>
+              )}
+              {config.mostrarRecursos && (
+                <Input
+                  label="Recursos disponíveis"
+                  hint="Ex: quadro, projetor, internet, livros…"
+                  value={state.recursos}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "set",
+                      field: "recursos",
+                      value: e.target.value,
+                    })
+                  }
+                />
+              )}
+              {config.mostrarObservacoesTurma && (
+                <Textarea
+                  label="Observações sobre a turma"
+                  hint="Algo importante para considerar?"
+                  value={state.observacoes_turma}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "set",
+                      field: "observacoes_turma",
+                      value: e.target.value,
+                    })
+                  }
+                  rows={2}
+                />
+              )}
+            </StepBlock>
+          )}
 
-          {/* 5. Preferências */}
-          <StepBlock
-            numero={5}
-            titulo="Preferências"
-            subtitulo="opcional, mas melhora a qualidade do resultado"
-          >
-            {precisaLacuna && (
-              <Textarea
-                label="Lacuna de aprendizagem identificada"
-                hint="Descreva o que a turma ainda não dominou"
-                value={state.lacuna_aprendizagem}
-                onChange={(e) =>
-                  dispatch({
-                    type: "set",
-                    field: "lacuna_aprendizagem",
-                    value: e.target.value,
-                  })
-                }
-                rows={2}
-              />
-            )}
-            {precisaAdaptacao && (
-              <Textarea
-                label="Adaptação necessária"
-                hint="Descreva a necessidade educacional do(s) estudante(s)"
-                value={state.adaptacao_necessaria}
-                onChange={(e) =>
-                  dispatch({
-                    type: "set",
-                    field: "adaptacao_necessaria",
-                    value: e.target.value,
-                  })
-                }
-                rows={2}
-              />
-            )}
-            <Input
-              label="Metodologia desejada"
-              hint="Ex: aula expositiva, sala invertida, projetos…"
-              value={state.metodologia}
-              onChange={(e) =>
-                dispatch({
-                  type: "set",
-                  field: "metodologia",
-                  value: e.target.value,
-                })
-              }
-            />
-            <Input
-              label="Recursos disponíveis"
-              hint="Ex: quadro, projetor, internet, livros…"
-              value={state.recursos}
-              onChange={(e) =>
-                dispatch({
-                  type: "set",
-                  field: "recursos",
-                  value: e.target.value,
-                })
-              }
-            />
-            <Textarea
-              label="Observações sobre a turma"
-              hint="Algo importante para considerar?"
-              value={state.observacoes_turma}
-              onChange={(e) =>
-                dispatch({
-                  type: "set",
-                  field: "observacoes_turma",
-                  value: e.target.value,
-                })
-              }
-              rows={2}
-            />
-          </StepBlock>
-
+          {/* Botoes sticky */}
           <div className="sticky bottom-4 flex gap-2 rounded-xl border border-neutral-200 bg-white p-3 shadow-card">
             <Button
               variant="ghost"
@@ -502,7 +610,7 @@ export function WizardScreen({ modo, onVoltar }: Props) {
               disabled={!podeGerar}
               className="flex-1"
             >
-              {gerando ? "Gerando..." : `Gerar ${modoInfo.titulo.toLowerCase()}`}
+              {gerando ? "Gerando..." : config.tituloAcao}
             </Button>
           </div>
 

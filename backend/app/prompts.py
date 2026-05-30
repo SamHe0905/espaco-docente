@@ -60,13 +60,18 @@ Para fechar, os estudantes registram em duplas três efeitos da globalização o
     # ------------------------------------------------------------------
     "lista_de_exercicios": """MODO: LISTA DE EXERCÍCIOS.
 
-CORPO de cada aula: 5 questões objetivas/discursivas relacionadas à habilidade, seguidas do GABARITO.
+CORPO de cada aula: N questões relacionadas à habilidade, seguidas do GABARITO.
+
+O professor informa nas PREFERÊNCIAS PEDAGÓGICAS:
+- Quantidade de questões (padrão: 5)
+- Nível de dificuldade ('basico', 'intermediario', 'avancado' ou 'misto'; padrão: misto)
+- Tipo ('objetivas', 'discursivas', 'mista'; padrão: mista)
 
 Formato exato:
 
 Aula 1 – EM13CHS502 – 12/06
 
-1. [enunciado curto da questão]
+1. [enunciado curto]
 a) [alternativa]
 b) [alternativa]
 c) [alternativa]
@@ -78,11 +83,14 @@ b) ...
 c) ...
 d) ...
 
-(... 5 questões totais)
+(... N questões totais)
 
 Gabarito: 1-c, 2-a, 3-d, 4-b, 5-a
 
-Misture 1 questão de nível básico, 3 médias e 1 mais desafiadora. Pode incluir 1 questão discursiva no lugar de objetiva (sem alternativas, com resposta esperada no gabarito).
+Regras:
+- Se misto: distribua niveis equilibradamente.
+- Se mista (tipo): proporção 80% objetivas + 20% discursivas.
+- Questoes discursivas nao tem alternativas; gabarito traz a resposta esperada em ate 30 palavras.
 """,
     # ------------------------------------------------------------------
     "projetos_e_trabalhos": """MODO: APRENDIZAGEM BASEADA EM PROJETOS.
@@ -171,10 +179,37 @@ def build_messages(req: GenerateRequest, hits: list[CurriculumHit]) -> list[dict
         pref_lines.append(f"- Recursos disponíveis: {req.recursos}")
     if req.observacoes_turma:
         pref_lines.append(f"- Perfil da turma: {req.observacoes_turma}")
-    if req.adaptacao_necessaria:
-        pref_lines.append(f"- Adaptação necessária: {req.adaptacao_necessaria}")
+
+    # Recomposicao
     if req.lacuna_aprendizagem:
-        pref_lines.append(f"- Lacuna de aprendizagem: {req.lacuna_aprendizagem}")
+        pref_lines.append(f"- LACUNA DE APRENDIZAGEM: {req.lacuna_aprendizagem}")
+    if req.nivel_defasagem:
+        pref_lines.append(f"- Nível de defasagem: {req.nivel_defasagem}")
+
+    # Adaptacao
+    if req.tipo_necessidade:
+        pref_lines.append(f"- NECESSIDADE EDUCACIONAL: {req.tipo_necessidade}")
+    if req.adaptacao_necessaria:
+        pref_lines.append(f"- Detalhes da adaptação: {req.adaptacao_necessaria}")
+    if req.apoios_disponiveis:
+        pref_lines.append(f"- Apoios disponíveis: {req.apoios_disponiveis}")
+
+    # Lista de exercicios
+    if req.quantidade_questoes:
+        pref_lines.append(f"- Quantidade de questões: {req.quantidade_questoes}")
+    if req.dificuldade:
+        pref_lines.append(f"- Nível de dificuldade: {req.dificuldade}")
+    if req.tipo_questoes:
+        pref_lines.append(f"- Tipo de questões: {req.tipo_questoes}")
+
+    # Projetos
+    if req.duracao_projeto:
+        pref_lines.append(f"- Duração do projeto: {req.duracao_projeto}")
+    if req.produto_final:
+        pref_lines.append(f"- Produto/entregável final: {req.produto_final}")
+    if req.publico_apresentacao:
+        pref_lines.append(f"- Público da apresentação: {req.publico_apresentacao}")
+
     preferencias = "\n".join(pref_lines) if pref_lines else "- Sem preferências específicas."
 
     user = f"""Gere um planejamento para a seguinte turma:

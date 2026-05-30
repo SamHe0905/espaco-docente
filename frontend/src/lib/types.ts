@@ -47,8 +47,21 @@ export interface GenerateRequest {
   metodologia?: string;
   recursos?: string;
   observacoes_turma?: string;
-  adaptacao_necessaria?: string;
+  // Recomposição
   lacuna_aprendizagem?: string;
+  nivel_defasagem?: string;
+  // Adaptação
+  adaptacao_necessaria?: string;
+  tipo_necessidade?: string;
+  apoios_disponiveis?: string;
+  // Lista de exercícios
+  quantidade_questoes?: number;
+  dificuldade?: string;
+  tipo_questoes?: string;
+  // Projetos
+  duracao_projeto?: string;
+  produto_final?: string;
+  publico_apresentacao?: string;
 }
 
 export interface AulaOutput {

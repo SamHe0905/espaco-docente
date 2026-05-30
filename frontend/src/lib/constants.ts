@@ -170,3 +170,197 @@ export const MODOS: ModoInfo[] = [
 export const MODO_BY_ID = Object.fromEntries(
   MODOS.map((m) => [m.id, m]),
 ) as Record<Modo, ModoInfo>;
+
+// ----------------------------------------------------------------------
+// Configuracao do wizard por modo
+// Define titulo, comportamento de cada step, campos extras
+// ----------------------------------------------------------------------
+export interface WizardConfig {
+  // Label/cta
+  tituloAcao: string;             // "Gerar plano de aula" etc
+  rotuloAulasSection: string;     // "Aulas" / "Etapas do projeto" / null para esconder
+  subtituloAulas: string;
+  precisaAulasComData: boolean;   // se false, gera 1 aula fake sem data
+  // Step 5 — preferencias
+  mostrarMetodologia: boolean;
+  mostrarRecursos: boolean;
+  mostrarObservacoesTurma: boolean;
+  // Campos especificos
+  camposExtras: CampoExtra[];
+}
+
+export type CampoExtra =
+  | { tipo: "input"; key: string; label: string; hint?: string; placeholder?: string; obrigatorio?: boolean }
+  | { tipo: "textarea"; key: string; label: string; hint?: string; placeholder?: string; rows?: number; obrigatorio?: boolean }
+  | { tipo: "select"; key: string; label: string; hint?: string; options: { value: string; label: string }[]; obrigatorio?: boolean }
+  | { tipo: "number"; key: string; label: string; hint?: string; min?: number; max?: number; defaultValue?: number };
+
+export const WIZARD_CONFIG_POR_MODO: Record<Modo, WizardConfig> = {
+  plano_de_aula: {
+    tituloAcao: "Gerar plano de aula",
+    rotuloAulasSection: "Aulas",
+    subtituloAulas: "até 5 aulas por vez",
+    precisaAulasComData: true,
+    mostrarMetodologia: true,
+    mostrarRecursos: true,
+    mostrarObservacoesTurma: true,
+    camposExtras: [],
+  },
+  sugestao_de_aula: {
+    tituloAcao: "Gerar sugestão de aula",
+    rotuloAulasSection: "Aulas",
+    subtituloAulas: "até 5 aulas por vez",
+    precisaAulasComData: true,
+    mostrarMetodologia: true,
+    mostrarRecursos: true,
+    mostrarObservacoesTurma: true,
+    camposExtras: [],
+  },
+  lista_de_exercicios: {
+    tituloAcao: "Gerar lista de exercícios",
+    rotuloAulasSection: "Configurações da lista",
+    subtituloAulas: "uma lista por geração",
+    precisaAulasComData: false,
+    mostrarMetodologia: false,
+    mostrarRecursos: false,
+    mostrarObservacoesTurma: true,
+    camposExtras: [
+      {
+        tipo: "number",
+        key: "quantidade_questoes",
+        label: "Quantidade de questões",
+        hint: "5 a 30 questões",
+        min: 5,
+        max: 30,
+        defaultValue: 5,
+      },
+      {
+        tipo: "select",
+        key: "dificuldade",
+        label: "Nível de dificuldade",
+        options: [
+          { value: "basico", label: "Básico" },
+          { value: "intermediario", label: "Intermediário" },
+          { value: "avancado", label: "Avançado" },
+          { value: "misto", label: "Misto (recomendado)" },
+        ],
+      },
+      {
+        tipo: "select",
+        key: "tipo_questoes",
+        label: "Tipo de questões",
+        options: [
+          { value: "objetivas", label: "Apenas objetivas (múltipla escolha)" },
+          { value: "discursivas", label: "Apenas discursivas" },
+          { value: "mista", label: "Mistas (80% objetivas + 20% discursivas)" },
+        ],
+      },
+    ],
+  },
+  projetos_e_trabalhos: {
+    tituloAcao: "Gerar projeto",
+    rotuloAulasSection: "Etapas do projeto",
+    subtituloAulas: "cada aula é uma etapa do projeto (até 5)",
+    precisaAulasComData: true,
+    mostrarMetodologia: false,
+    mostrarRecursos: true,
+    mostrarObservacoesTurma: true,
+    camposExtras: [
+      {
+        tipo: "input",
+        key: "duracao_projeto",
+        label: "Duração total do projeto",
+        hint: "Ex: 2 semanas, 1 mês, 1 bimestre",
+        placeholder: "Ex: 4 semanas",
+      },
+      {
+        tipo: "input",
+        key: "produto_final",
+        label: "Produto/entregável final",
+        hint: "O que os estudantes vão produzir?",
+        placeholder: "Ex: apresentação, banner, vídeo, podcast",
+      },
+      {
+        tipo: "input",
+        key: "publico_apresentacao",
+        label: "Público da apresentação",
+        hint: "Para quem o projeto será apresentado?",
+        placeholder: "Ex: a turma, a escola, as famílias, a comunidade",
+      },
+    ],
+  },
+  recomposicao_paralela: {
+    tituloAcao: "Gerar recomposição",
+    rotuloAulasSection: "Aulas de recomposição",
+    subtituloAulas: "até 5 aulas focadas na lacuna",
+    precisaAulasComData: true,
+    mostrarMetodologia: false,
+    mostrarRecursos: true,
+    mostrarObservacoesTurma: true,
+    camposExtras: [
+      {
+        tipo: "textarea",
+        key: "lacuna_aprendizagem",
+        label: "Lacuna de aprendizagem identificada",
+        hint: "Descreva concretamente o que a turma ainda não dominou",
+        placeholder: "Ex: dificuldade em interpretar problemas com fração, troca b/p, leitura silabada…",
+        rows: 3,
+        obrigatorio: true,
+      },
+      {
+        tipo: "select",
+        key: "nivel_defasagem",
+        label: "Nível da defasagem",
+        options: [
+          { value: "leve", label: "Leve — alguns conceitos isolados" },
+          { value: "media", label: "Média — bloco curricular do ano anterior" },
+          { value: "grave", label: "Grave — fundamentos de 2+ anos atrás" },
+        ],
+      },
+    ],
+  },
+  adaptacao_educacao_especial: {
+    tituloAcao: "Gerar adaptação",
+    rotuloAulasSection: "Aulas adaptadas",
+    subtituloAulas: "até 5 aulas com adaptação aplicada",
+    precisaAulasComData: true,
+    mostrarMetodologia: false,
+    mostrarRecursos: true,
+    mostrarObservacoesTurma: false,
+    camposExtras: [
+      {
+        tipo: "select",
+        key: "tipo_necessidade",
+        label: "Necessidade educacional específica",
+        options: [
+          { value: "TEA", label: "Transtorno do Espectro Autista (TEA)" },
+          { value: "TDAH", label: "TDAH" },
+          { value: "Deficiencia Visual", label: "Deficiência visual" },
+          { value: "Deficiencia Auditiva", label: "Deficiência auditiva / surdez" },
+          { value: "Deficiencia Intelectual", label: "Deficiência intelectual" },
+          { value: "Deficiencia Motora", label: "Deficiência motora" },
+          { value: "Dislexia", label: "Dislexia / outros transtornos de aprendizagem" },
+          { value: "Altas Habilidades", label: "Altas habilidades / superdotação" },
+          { value: "Outras", label: "Outras (descrever abaixo)" },
+        ],
+        obrigatorio: true,
+      },
+      {
+        tipo: "textarea",
+        key: "adaptacao_necessaria",
+        label: "Detalhes do(s) estudante(s) e da adaptação",
+        hint: "Ex: estudante com TEA, sensibilidade auditiva, comunicação verbal limitada…",
+        placeholder: "Descreva o contexto específico que vai orientar a adaptação",
+        rows: 3,
+        obrigatorio: true,
+      },
+      {
+        tipo: "input",
+        key: "apoios_disponiveis",
+        label: "Apoios disponíveis (opcional)",
+        hint: "Ex: professor de apoio, sala de recursos, intérprete de Libras",
+        placeholder: "",
+      },
+    ],
+  },
+};
