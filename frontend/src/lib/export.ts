@@ -209,7 +209,10 @@ export async function exportToWord(
 async function htmlParaPdf(html: string, nomeArquivo: string): Promise<void> {
   const A4_W_MM = 210;
   const A4_H_MM = 297;
-  const MARGEM_MM = 0; // o HTML ja tem padding interno; renderizamos canvas cheio
+  // Margem de PDF aplicada em TODAS as paginas (incluindo as do meio
+  // quando o conteudo quebra em varias). Garante respiro consistente
+  // entre o conteudo e a borda da folha.
+  const MARGEM_MM = 20;
   const PX_PER_MM = 3.78; // aproximadamente 96dpi
   const larguraPx = Math.round((A4_W_MM - MARGEM_MM * 2) * PX_PER_MM);
 
@@ -290,7 +293,10 @@ const ESTILOS_BASE = `
   font-size: 12pt;
   line-height: 1.5;
   color: #111;
-  padding: 30mm 20mm 25mm 30mm;
+  /* Margens do PDF sao aplicadas a nivel de pagina (MARGEM_MM em
+     htmlParaPdf). Aqui mantemos apenas um respiro top/bottom pra
+     primeira/ultima pagina nao colarem o conteudo na margem fisica. */
+  padding: 6mm 0;
   box-sizing: border-box;
   word-wrap: break-word;
 `;
