@@ -46,9 +46,30 @@ def parse_llm_output(
 
     Retorna (aulas, problemas). Se problemas != [], deve-se considerar retry.
     A faixa de palavras valida varia conforme o modo.
+
+    Caso especial: 'projetos_e_trabalhos' nao segue formato 'Aula X – COD – DD/MM'.
+    Gera UM documento estruturado retornado como 1 AulaOutput.
     """
     problemas: list[str] = []
     aulas: list[AulaOutput] = []
+
+    # Modo projeto: o LLM gera um documento unico (sem cabecalhos de aula).
+    # Retornamos uma AulaOutput soh com numero=1 e o texto inteiro.
+    if modo == "projetos_e_trabalhos":
+        corpo = text.strip()
+        words = count_words(corpo)
+        if words < 200:
+            problemas.append(f"Projeto curto demais ({words} palavras, esperado >= 200)")
+        return [
+            AulaOutput(
+                numero=1,
+                codigo_bncc=None,
+                data=date.today(),
+                texto=corpo,
+                palavras=words,
+            )
+        ], problemas
+
     min_w, max_w = WORD_RANGE_POR_MODO.get(modo, (40, 60))
 
     # encontra todos os cabecalhos

@@ -382,10 +382,10 @@ export const WIZARD_CONFIG_POR_MODO: Record<Modo, WizardConfig> = {
     ],
   },
   projetos_e_trabalhos: {
-    tituloAcao: "Gerar projeto",
-    rotuloAulasSection: "Etapas do projeto",
-    subtituloAulas: "cada aula é uma etapa do projeto (até 5)",
-    precisaAulasComData: true,
+    tituloAcao: "Gerar esqueleto do projeto",
+    rotuloAulasSection: "Detalhes do projeto",
+    subtituloAulas: "informações pra moldar o esqueleto",
+    precisaAulasComData: false,
     mostrarMetodologia: false,
     mostrarRecursos: true,
     mostrarObservacoesTurma: true,
@@ -393,7 +393,7 @@ export const WIZARD_CONFIG_POR_MODO: Record<Modo, WizardConfig> = {
       {
         tipo: "input",
         key: "duracao_projeto",
-        label: "Duração total do projeto",
+        label: "Duração estimada do projeto",
         hint: "Ex: 2 semanas, 1 mês, 1 bimestre",
         placeholder: "Ex: 4 semanas",
       },

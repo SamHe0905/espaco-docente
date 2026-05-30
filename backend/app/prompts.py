@@ -93,16 +93,56 @@ Regras:
 - Questoes discursivas nao tem alternativas; gabarito traz a resposta esperada em ate 30 palavras.
 """,
     # ------------------------------------------------------------------
-    "projetos_e_trabalhos": """MODO: APRENDIZAGEM BASEADA EM PROJETOS.
+    "projetos_e_trabalhos": """MODO: ESQUELETO DE PROJETO (brainstorm pro professor adaptar).
 
-Cada AULA representa uma ETAPA do projeto. O CORPO descreve essa etapa em formato curto:
+IMPORTANTE: este modo NÃO segue o formato 'Aula X – CÓDIGO – DD/MM'.
+Em vez disso, gere UM documento estruturado descrevendo o projeto como um todo,
+pro professor usar como ponto de partida.
 
-Aula 1 – EM13CHS502 – 12/06
-Etapa: [nome da etapa, ex: "Sensibilização e pergunta-problema"]
-Atividade: [parágrafo de 50 a 80 palavras descrevendo o que acontece nessa etapa, com protagonismo do estudante]
-Entregável: [o que os estudantes produzem ao fim desta etapa]
+NÃO descreva o que acontece em cada aula individual. NÃO simule sequência de aulas.
+O objetivo é dar ao professor o ARCABOUÇO do projeto pra ele adaptar à sua realidade.
 
-Etapas típicas (use como guia): 1) Sensibilização e pergunta-problema, 2) Pesquisa e levantamento, 3) Planejamento, 4) Execução/produção, 5) Apresentação e avaliação.
+FORMATO EXATO DA SAÍDA (use estes cabeçalhos em maiúsculas, na ordem):
+
+TÍTULO DO PROJETO
+[título conciso e instigante baseado no tema do professor]
+
+PERGUNTA-PROBLEMA
+[a pergunta central que vai mover o projeto, em formato pergunta]
+
+JUSTIFICATIVA
+[parágrafo único de 50 a 80 palavras conectando o tema à realidade do estudante e à relevância pedagógica]
+
+OBJETIVOS DE APRENDIZAGEM
+[3 a 5 objetivos em forma de verbo no infinitivo, derivados das habilidades BNCC informadas]
+- objetivo 1
+- objetivo 2
+- ...
+
+PRODUTO FINAL
+[descrição do entregável esperado, considerando o que o professor pediu em 'produto_final'. Especifique formato, extensão e características.]
+
+ETAPAS SUGERIDAS
+[de 4 a 6 etapas, cada uma com NOME em negrito breve + 1 frase curta descrevendo o foco. NÃO atribua a aulas específicas, NÃO coloque datas.]
+1. **Sensibilização** — apresenta a pergunta-problema e levanta concepções prévias.
+2. **Pesquisa** — investigação em fontes diversas sobre os subtemas.
+3. ...
+
+RECURSOS NECESSÁRIOS
+[lista enxuta de materiais, ferramentas digitais, espaços; baseada em 'recursos' informados]
+- recurso 1
+- recurso 2
+
+AVALIAÇÃO
+[parágrafo de 40 a 80 palavras sobre como avaliar processo + produto, considerando 'publico_apresentacao' se informado]
+
+DICAS PARA O PROFESSOR
+[3 a 5 sugestões práticas pra adaptar, conduzir ou diferenciar o projeto pra realidade da turma]
+- dica 1
+- dica 2
+- ...
+
+Considere o tempo informado em 'duracao_projeto' pra dimensionar profundidade das etapas (sem listar datas).
 """,
     # ------------------------------------------------------------------
     "recomposicao_paralela": """MODO: RECOMPOSIÇÃO PARALELA (foco na LACUNA DE APRENDIZAGEM).

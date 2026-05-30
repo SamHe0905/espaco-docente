@@ -140,16 +140,41 @@ export function ResultPane({ modo, resultado, requestUsado, gerando }: Props) {
         {requestUsado.codigo_bncc && (
           <Badge tone="brand">Habilidade: {requestUsado.codigo_bncc}</Badge>
         )}
-        <Badge tone="info">
-          {resultado.aulas.length} aula{resultado.aulas.length > 1 ? "s" : ""}{" "}
-          planejada{resultado.aulas.length > 1 ? "s" : ""}
-        </Badge>
-        <Badge tone="neutral">Carga horária: {cargaHoraria}</Badge>
+        {modo === "projetos_e_trabalhos" ? (
+          <Badge tone="info">Esqueleto de projeto</Badge>
+        ) : (
+          <>
+            <Badge tone="info">
+              {resultado.aulas.length} aula
+              {resultado.aulas.length > 1 ? "s" : ""}{" "}
+              planejada{resultado.aulas.length > 1 ? "s" : ""}
+            </Badge>
+            <Badge tone="neutral">Carga horária: {cargaHoraria}</Badge>
+          </>
+        )}
       </div>
 
       <div className="space-y-3">
         {resultado.aulas.map((a) => {
           const palavras = a.palavras;
+          // Modo projeto: documento unico, sem pilulas de aula/data/codigo
+          if (modo === "projetos_e_trabalhos") {
+            return (
+              <motion.article
+                key={a.numero}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border border-neutral-200 bg-white p-5"
+              >
+                <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-800">
+                  {a.texto}
+                </p>
+                <div className="mt-3 text-right">
+                  <Badge tone="neutral">{palavras} palavras</Badge>
+                </div>
+              </motion.article>
+            );
+          }
           return (
             <motion.article
               key={a.numero}
