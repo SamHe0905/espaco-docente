@@ -44,39 +44,39 @@ A aula abordará os impactos sociais da globalização por meio de exposição d
 
 Este modo NÃO é um plano breve um pouco mais longo. É um ROTEIRO COMPLETO de UMA aula, com profundidade real pra o professor entrar em sala sem precisar planejar mais nada. Foco em UMA aula por vez (se o professor solicitar várias datas, gere um roteiro completo e independente para cada — sem repetir as mesmas ideias em aulas diferentes).
 
-CORPO de cada aula: 500 a 900 palavras, estruturado nas SEÇÕES abaixo (use estes títulos em CAIXA ALTA, na ordem, separados por linha em branco). NÃO use bullets nem markdown; use prosa direta dentro de cada seção. Cada seção deve trazer INFORMAÇÃO NOVA e CONCRETA — proibido reformular o que já foi dito.
+CORPO de cada aula: 500 a 900 palavras, estruturado nas SEÇÕES abaixo, na ordem, separadas por linha em branco. Cada título de seção deve aparecer EXATAMENTE no formato `## Título da Seção` (dois sustenidos + espaço + título em formato Capitalize As Iniciais — isso garante negrito ao exportar). Dentro de cada seção, use prosa direta — SEM bullets, SEM listas com hífen, SEM outros marcadores markdown. Cada seção deve trazer INFORMAÇÃO NOVA e CONCRETA — proibido reformular o que já foi dito.
 
 Aula X – [CÓDIGO] – DD/MM
 
-VISÃO GERAL DA AULA
+## Visão Geral da Aula
 Um parágrafo de 50 a 80 palavras: o que esta aula entrega ao final, qual a grande pergunta que ela responde, e por que esse recorte importa pro estudante. Sem rodeios, sem palavras vazias.
 
-OBJETIVOS DE APRENDIZAGEM
-3 a 5 objetivos em verbos no infinitivo, derivados da habilidade BNCC desta aula. Um por linha. Cada um deve ser observável (o que o estudante demonstrará saber/fazer).
+## Objetivos de Aprendizagem
+3 a 5 objetivos em verbos no infinitivo, derivados da habilidade BNCC desta aula. Cada um deve ser observável (o que o estudante demonstrará saber/fazer). Apresente em prosa corrida, separados por ponto-e-vírgula — não use lista com hífen.
 
-MATERIAIS E PREPARAÇÃO PRÉVIA
-Liste APENAS o que é necessário pra esta aula específica. O que o professor precisa providenciar antes (impressos, links, imagens, organização da sala). Considere a realidade da escola pública — sem materiais caros ou difíceis.
+## Materiais e Preparação Prévia
+Em prosa, descreva APENAS o que é necessário pra esta aula específica e o que o professor precisa providenciar antes (impressos, links, imagens, organização da sala). Considere a realidade da escola pública — sem materiais caros ou difíceis. Sem bullets.
 
-SEQUÊNCIA DIDÁTICA (passo a passo com tempo)
-Divida a aula em 4 a 6 MOMENTOS sequenciais. Para cada um indique entre parênteses o tempo aproximado em minutos. Descreva em prosa o que o PROFESSOR faz, o que os ESTUDANTES fazem, e como a transição pro próximo momento acontece. Seja específico: cite a pergunta exata da abertura, o exemplo concreto usado, o comando que o professor dá. NÃO repita conteúdo da Visão Geral. Esta é a parte mais densa do roteiro.
+## Sequência Didática
+Divida a aula em 4 a 6 momentos sequenciais. Para cada um indique entre parênteses o tempo aproximado em minutos. Descreva em prosa o que o PROFESSOR faz, o que os ESTUDANTES fazem, e como a transição pro próximo momento acontece. Seja específico: cite a pergunta exata da abertura, o exemplo concreto usado, o comando que o professor dá. NÃO repita conteúdo da Visão Geral. Esta é a parte mais densa do roteiro. Cada momento em um parágrafo próprio (separado por linha em branco), sem bullets.
 
-ATIVIDADE CENTRAL — DETALHAMENTO
-Detalhe SÓ a atividade-chave da aula (a que mais demora ou produz a aprendizagem central): enunciado completo que será passado aos estudantes, organização da turma (individual/duplas/grupos), critério de execução, e o que o professor faz enquanto eles trabalham (circulação, intervenções típicas, perguntas mediadoras).
+## Atividade Central
+Detalhe SÓ a atividade-chave da aula (a que mais demora ou produz a aprendizagem central): enunciado completo que será passado aos estudantes, organização da turma (individual/duplas/grupos), critério de execução, e o que o professor faz enquanto eles trabalham (circulação, intervenções típicas, perguntas mediadoras). Prosa única, sem listas.
 
-AVALIAÇÃO FORMATIVA
-Como o professor sabe, AINDA NESTA AULA, se os estudantes alcançaram os objetivos. Indique 2 ou 3 evidências observáveis (uma resposta esperada, um registro produzido, uma participação característica) e o que fazer com cada uma. Não é prova ao final do bimestre — é leitura em tempo real.
+## Avaliação Formativa
+Como o professor sabe, AINDA NESTA AULA, se os estudantes alcançaram os objetivos. Indique 2 ou 3 evidências observáveis (uma resposta esperada, um registro produzido, uma participação característica) e o que fazer com cada uma. Não é prova ao final do bimestre — é leitura em tempo real. Texto em prosa.
 
-POSSÍVEIS DIFICULDADES E MEDIAÇÕES
-Antecipe 2 ou 3 obstáculos reais (conceitos que confundem, perfis de estudante que travam, dispersão típica) e descreva a mediação concreta para cada — uma frase prática que o professor pode usar, um ajuste de organização, um exemplo alternativo.
+## Possíveis Dificuldades e Mediações
+Antecipe 2 ou 3 obstáculos reais (conceitos que confundem, perfis de estudante que travam, dispersão típica) e descreva a mediação concreta para cada — uma frase prática que o professor pode usar, um ajuste de organização, um exemplo alternativo. Em prosa.
 
-FECHAMENTO E PRÓXIMOS PASSOS
+## Fechamento e Próximos Passos
 Como a aula termina (síntese conduzida, registro coletivo, pergunta de saída) e o que conecta com a próxima aula da sequência. Se houver tarefa de casa pertinente, descreva-a aqui em uma frase — sem inventar tarefa por inventar.
 
 REGRAS DURAS DE QUALIDADE:
-- Cada seção traz informação NOVA. É proibido parafrasear o que já foi dito antes.
-- Linguagem operacional, com ações concretas e perguntas/falas exatas — não descrições genéricas tipo "fazer atividade interessante".
-- Considere turma de escola pública (~35 estudantes, recursos limitados).
-- Total da aula: 500 a 900 palavras. Se ficar abaixo de 500 está raso demais; se passar de 900 está prolixo.
+Cada seção traz informação NOVA. É proibido parafrasear o que já foi dito antes. Linguagem operacional, com ações concretas e perguntas/falas exatas — não descrições genéricas tipo "fazer atividade interessante". Considere turma de escola pública (~35 estudantes, recursos limitados). Total da aula: 500 a 900 palavras. Se ficar abaixo de 500 está raso demais; se passar de 900 está prolixo.
+
+REGRA DE FORMATAÇÃO (CRÍTICA):
+Os títulos de seção DEVEM aparecer literalmente como `## Título da Seção` no início de uma linha, sem outros caracteres antes. NÃO use CAIXA ALTA, NÃO use negrito com asteriscos, NÃO use bullets, NÃO use markdown além do `## ` nos títulos. O corpo de cada seção é prosa pura.
 """,
     # ------------------------------------------------------------------
     "lista_de_exercicios": """MODO: LISTA DE EXERCÍCIOS.

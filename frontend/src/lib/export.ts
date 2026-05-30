@@ -73,9 +73,24 @@ export async function exportToWord(
     // Quebra o texto em linhas para preservar formatos estruturados
     // (lista de exercicios, etapas de projeto). Linhas vazias viram
     // paragrafos vazios (separador visual).
+    // Linhas iniciando com '## ' viram subtitulos em negrito (roteiro detalhado).
     const linhas = a.texto.split(/\n/);
-    const paragsCorpo = linhas.map((linha) =>
-      new Paragraph({
+    const paragsCorpo = linhas.map((linha) => {
+      const headingMatch = linha.match(/^##\s+(.*)$/);
+      if (headingMatch) {
+        return new Paragraph({
+          spacing: { before: 240, after: 80, line: 360 },
+          children: [
+            new TextRun({
+              text: headingMatch[1].trim(),
+              bold: true,
+              font: "Times New Roman",
+              size: 26,
+            }),
+          ],
+        });
+      }
+      return new Paragraph({
         spacing: { line: 360 },
         alignment: AlignmentType.JUSTIFIED,
         indent: linha.trim() ? { firstLine: 708 } : undefined,
@@ -86,8 +101,8 @@ export async function exportToWord(
             size: 24,
           }),
         ],
-      }),
-    );
+      });
+    });
     return [
       new Paragraph({
         spacing: { before: 240, after: 120, line: 360 },
@@ -306,9 +321,14 @@ export async function exportToPDF(
   const aulasHtml = res.aulas
     .map((a) => {
       const cabecalho = `Aula ${a.numero} — ${a.codigo_bncc || "—"} — ${formataData(a.data)}`;
-      // preserva linhas vazias como pular paragrafo, mantem listas/cabecalhos
+      // preserva linhas vazias como pular paragrafo, mantem listas/cabecalhos.
+      // Linhas com '## ' viram subtitulos em negrito.
       const blocos = a.texto.split(/\n/).map((linha) => {
         if (!linha.trim()) return "<div style='height: 6pt;'></div>";
+        const headingMatch = linha.match(/^##\s+(.*)$/);
+        if (headingMatch) {
+          return `<p style="margin: 10pt 0 4pt 0; font-weight: bold; font-size: 13pt;">${escapeHtml(headingMatch[1].trim())}</p>`;
+        }
         return `<p style="margin: 0 0 4pt 0; text-align: justify; text-indent: 1.25cm;">${escapeHtml(linha)}</p>`;
       });
       return `

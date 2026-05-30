@@ -43,6 +43,38 @@ function formataData(iso: string): string {
   return `${d}/${m}`;
 }
 
+// Renderiza o texto da aula: linhas que comecam com '## ' viram subtitulos
+// em negrito; demais linhas viram paragrafos justificados. Linhas vazias
+// viram espacador. Convencao usada pelo modo roteiro detalhado.
+function TextoFormatado({ texto }: { texto: string }) {
+  const linhas = texto.split(/\n/);
+  return (
+    <div className="space-y-2 text-sm leading-relaxed text-neutral-800">
+      {linhas.map((linha, i) => {
+        const headingMatch = linha.match(/^##\s+(.*)$/);
+        if (headingMatch) {
+          return (
+            <h3
+              key={i}
+              className="pt-2 text-sm font-bold text-neutral-900"
+            >
+              {headingMatch[1].trim()}
+            </h3>
+          );
+        }
+        if (!linha.trim()) {
+          return <div key={i} className="h-1" />;
+        }
+        return (
+          <p key={i} className="text-justify">
+            {linha}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 function calcCargaHoraria(qtd: number, minutosPorAula = 50): string {
   const total = qtd * minutosPorAula;
   const h = Math.floor(total / 60);
@@ -261,9 +293,7 @@ export function ResultPane({ modo, resultado, requestUsado, gerando, onRegerar, 
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-xl border border-neutral-200 bg-white p-5"
               >
-                <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-800">
-                  {a.texto}
-                </p>
+                <TextoFormatado texto={a.texto} />
                 <div className="mt-3 text-right">
                   <Badge tone="neutral">{palavras} palavras</Badge>
                 </div>
@@ -285,9 +315,7 @@ export function ResultPane({ modo, resultado, requestUsado, gerando, onRegerar, 
                   <Badge tone="neutral">{formataData(a.data)}</Badge>
                   <Badge tone="neutral">{palavras} palavras</Badge>
                 </div>
-                <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-800">
-                  {a.texto}
-                </p>
+                <TextoFormatado texto={a.texto} />
               </motion.article>
             );
           })}
