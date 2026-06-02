@@ -71,6 +71,12 @@ export const api = {
   searchQuestoes: (req: SearchQuestoesRequest) =>
     post<SearchQuestoesRequest, SearchQuestoesResponse>("/search-questoes", req),
 
+  // Presenca (contador de online em tempo real)
+  presencePing: (sessionId: string) =>
+    post<{ session_id: string }, { online: number }>("/presence/ping", {
+      session_id: sessionId,
+    }),
+
   // Auth
   register: (req: { username: string; password: string; nome_exibicao?: string }) =>
     post<typeof req, TokenResponse>("/auth/register", req),

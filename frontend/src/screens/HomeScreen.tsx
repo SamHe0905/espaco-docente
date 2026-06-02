@@ -8,6 +8,7 @@ import {
 } from "../lib/constants";
 import type { Modo } from "../lib/types";
 import { historico } from "../lib/storage";
+import { useOnlineCount } from "../lib/useOnlineCount";
 import type { AuthState } from "../lib/userAuth";
 
 interface Props {
@@ -30,6 +31,7 @@ export function HomeScreen({
   onAbrirPerfil,
 }: Props) {
   const [qtdHistorico, setQtdHistorico] = useState(0);
+  const online = useOnlineCount();
   useEffect(() => {
     setQtdHistorico(historico.listar().length);
   }, []);
@@ -52,6 +54,18 @@ export function HomeScreen({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {online !== null && online > 0 && (
+            <span
+              title={`${online} ${online === 1 ? "pessoa" : "pessoas"} usando a plataforma agora`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              {online} online
+            </span>
+          )}
           {qtdHistorico > 0 && (
             <button
               onClick={onAbrirHistorico}

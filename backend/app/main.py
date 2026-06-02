@@ -22,6 +22,7 @@ from .schemas import (
     SearchQuestoesRequest,
     SearchQuestoesResponse,
 )
+from .presence import ping as presence_ping, online_count as presence_count
 from .professores import router as professores_router
 from .search import search_curriculum
 from .usage import tracker as usage_tracker
@@ -60,6 +61,24 @@ def _check_admin(
 @app.get("/")
 def health() -> dict:
     return {"status": "ok", "service": "espaco-docente", "version": app.version}
+
+
+@app.post("/presence/ping")
+def post_presence_ping(payload: dict) -> dict:
+    """Marca sessao como ativa. Retorna contador de pessoas online agora.
+
+    Body: {"session_id": "<uuid gerado pelo client>"}
+    """
+    sid = (payload or {}).get("session_id", "").strip()
+    if not sid or len(sid) > 64:
+        raise HTTPException(status_code=400, detail="session_id invalido")
+    return {"online": presence_ping(sid)}
+
+
+@app.get("/presence/count")
+def get_presence_count() -> dict:
+    """Quantas sessoes ativas agora (read-only)."""
+    return {"online": presence_count()}
 
 
 @app.get("/llm-usage")
