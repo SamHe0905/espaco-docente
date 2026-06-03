@@ -121,10 +121,12 @@ def parse_llm_output(
 async def gerar(req: GenerateRequest) -> GenerateResponse:
     from . import cache as cache_mod
 
-    # 0. Cache (a menos que o professor tenha pedido regerar)
+    # 0. Cache. Sempre computamos o hash quando o modo e cacheavel — assim,
+    # mesmo se o professor clicou "Regerar" (que ignora o lookup), o resultado
+    # novo eh salvo no cache e substitui o anterior pra proximas requests.
     cached_hash = ""
-    if not req.force_regenerate:
-        if cache_mod.cache_pode_usar(req.modo):
+    if cache_mod.cache_pode_usar(req.modo):
+        if not req.force_regenerate:
             cached, cached_hash = cache_mod.cache_lookup_exato(req)
             if cached:
                 cache_mod.metric_exato_hit()
@@ -138,7 +140,10 @@ async def gerar(req: GenerateRequest) -> GenerateResponse:
                 return cached_sem
             cache_mod.metric_miss()
         else:
-            cache_mod.metric_skip()
+            # Force regenerate: pula o lookup mas garante o hash pra salvar depois
+            cached_hash = cache_mod.hash_request(req)
+    else:
+        cache_mod.metric_skip()
 
     # 1. RAG: monta o contexto curricular
     query = req.tema + (f" {req.foco_especifico}" if req.foco_especifico else "")
@@ -180,7 +185,7 @@ async def gerar(req: GenerateRequest) -> GenerateResponse:
 
     # 4. retry uma vez se houver problemas
     if problemas and aulas:
-        retry_msgs = build_retry_message(raw, problemas)
+        retry_msgs = build_retry_message(raw, problemas, modo=modo_validacao)
         try:
             raw2 = await chat(retry_msgs, temperature=0.35, max_tokens=4000)
             aulas2, problemas2 = parse_llm_output(raw2, len(req.aulas), modo_validacao)
@@ -198,8 +203,11 @@ async def gerar(req: GenerateRequest) -> GenerateResponse:
         fonte="llm",
     )
 
-    # Persiste no cache pra requests futuros (so pra modos cacheaveis)
-    if cached_hash and not req.force_regenerate and aulas:
+    # Persiste no cache pra requests futuros (so pra modos cacheaveis).
+    # IMPORTANTE: salva tambem quando force_regenerate=True, com upsert na
+    # mesma chave — assim "Regerar" atualiza a entrada cacheada em vez de
+    # deixar o registro antigo continuar valido por 7 dias.
+    if cached_hash and aulas:
         cache_mod.cache_save(req, resposta, cached_hash)
 
     return resposta

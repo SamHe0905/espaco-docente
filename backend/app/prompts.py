@@ -355,13 +355,21 @@ Responda APENAS com as aulas no formato apropriado, sem introdução, sem conclu
     ]
 
 
-def build_retry_message(original: str, problemas: list[str]) -> list[dict]:
-    """Mensagem de retry quando a primeira saida nao respeita o formato."""
+def build_retry_message(original: str, problemas: list[str], modo: str = "plano_de_aula") -> list[dict]:
+    """Mensagem de retry quando a primeira saida nao respeita o formato.
+
+    O lembrete final usa as instrucoes do MODO atual (importante: cada modo
+    tem faixa de palavras e formato diferentes — o retry NAO pode fixar uma
+    faixa unica).
+    """
+    instrucao_modo = MODO_INSTRUCOES.get(modo, MODO_INSTRUCOES["plano_de_aula"])
     return [
         {
             "role": "system",
             "content": SYSTEM_BASE
-            + "\n\nVocê acabou de gerar um output que NÃO seguiu as regras. "
+            + "\n\n"
+            + instrucao_modo
+            + "\n\nVocê acabou de gerar um output que NÃO seguiu as regras acima. "
             "Corrija e responda APENAS com as aulas no formato pedido.",
         },
         {"role": "user", "content": f"Output anterior:\n\n{original}"},
@@ -370,7 +378,7 @@ def build_retry_message(original: str, problemas: list[str]) -> list[dict]:
             "content": "Problemas detectados:\n- "
             + "\n- ".join(problemas)
             + "\n\nReescreva mantendo o mesmo conteúdo geral, mas corrigindo "
-            "TODOS os problemas listados. Cada aula deve ter parágrafo único "
-            "com 40 a 60 palavras, no formato 'Aula X – CÓDIGO – DD/MM'.",
+            "TODOS os problemas listados. Siga EXATAMENTE o formato e a faixa de "
+            "palavras descritos no SYSTEM PROMPT acima — NÃO use outra faixa.",
         },
     ]

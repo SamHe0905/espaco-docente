@@ -40,6 +40,11 @@ CACHE_SEMANTICO_MODES = {
 
 SIMILARITY_THRESHOLD = 0.95
 
+# Versao do prompt — incrementar quando o formato de output mudar.
+# Faz com que respostas cacheadas com versao anterior nao sejam mais retornadas,
+# evitando que mudancas de prompt fiquem "presas" 7 dias por causa do TTL.
+PROMPT_VERSION = "v2-secoes-md"
+
 
 # ---------------------------------------------------------------------------
 # Hash determinístico
@@ -53,6 +58,7 @@ def _hash_request(req: GenerateRequest) -> str:
     nao afetam o conteudo pedagogico.
     """
     payload: dict[str, Any] = {
+        "_prompt_version": PROMPT_VERSION,
         "modo": req.modo,
         "etapa": req.etapa,
         "serie": req.serie or "",
@@ -99,6 +105,11 @@ def _texto_pra_embedding(req: GenerateRequest) -> str:
 # ---------------------------------------------------------------------------
 # API publica
 # ---------------------------------------------------------------------------
+
+def hash_request(req: GenerateRequest) -> str:
+    """API publica para obter o hash de uma request (uso externo)."""
+    return _hash_request(req)
+
 
 def cache_pode_usar(modo: str) -> bool:
     return modo in CACHE_EXATO_MODES
