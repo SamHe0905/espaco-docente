@@ -18,6 +18,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# DirectML (GPU AMD) nao consegue setar version_counter em "inference tensors",
+# o que quebra a normalizacao in-place do encode ("Cannot set version_counter
+# for inference tensor"). Trocar inference_mode -> no_grad destrava a bge-m3 na
+# GPU. O fallback CPU continua funcionando normalmente.
+import torch
+torch.inference_mode = torch.no_grad
+
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "backend"
 load_dotenv(BACKEND / ".env")
