@@ -63,6 +63,23 @@ def health() -> dict:
     return {"status": "ok", "service": "espaco-docente", "version": app.version}
 
 
+@app.get("/keep-alive")
+def keep_alive() -> dict:
+    """Mantem HF Space quente E Supabase ativo (evita pause do free tier).
+
+    Faz uma query minima no banco pra contar como atividade: o Supabase free
+    pausa apos ~7 dias sem nenhuma query. Pingado pelo GitHub Actions a cada 12h.
+    """
+    from .supabase_client import get_client
+    db_ok = False
+    try:
+        get_client().table("metodologias").select("id").limit(1).execute()
+        db_ok = True
+    except Exception as e:
+        print(f"[keep-alive] query no supabase falhou: {e}")
+    return {"status": "ok", "db": db_ok}
+
+
 @app.post("/presence/ping")
 def post_presence_ping(payload: dict) -> dict:
     """Marca sessao como ativa. Retorna contador de pessoas online agora.

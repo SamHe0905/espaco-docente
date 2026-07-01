@@ -1,11 +1,12 @@
-name: Keep HuggingFace Space alive
+name: Keep HuggingFace Space + Supabase alive
 
-# Pinga o backend a cada 12h pra evitar o sleep de 48h sem atividade.
-# Free tier do HF Spaces dorme apos 48h sem requests — esse ping mantem
-# o container quente e o primeiro acesso de usuarios fica sempre rapido.
+# Pinga o backend a cada 12h. O endpoint /keep-alive:
+#   1. mantem o HF Space quente (free tier dorme apos 48h sem requests)
+#   2. faz uma query no Supabase, contando como atividade (free tier pausa
+#      o projeto apos ~7 dias sem NENHUMA query no banco)
 #
-# Custo: ~30s de execucao por run × 2 runs/dia × 30 dias = 30min/mes
-# Limite gratuito do GitHub Actions: 2000min/mes em repos privados.
+# Um unico ping resolve os dois. Custo: ~30s/run × 2 runs/dia × 30 dias =
+# 30min/mes (limite gratuito do GitHub Actions: 2000min/mes em repo privado).
 
 on:
   schedule:
@@ -19,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Ping HF Space health endpoint
+      - name: Ping backend keep-alive (HF Space + Supabase)
         run: |
           set -e
-          URL="https://espacodocente01-api.hf.space/"
+          URL="https://espacodocente01-api.hf.space/keep-alive"
           echo "Pinging $URL"
           # -L segue redirect; -m 90 limita a 90s (acomoda cold start do bge-m3)
           response=$(curl -sL -m 90 -o /tmp/body -w "%{http_code}" "$URL")
@@ -34,4 +35,9 @@ jobs:
           if [ "$response" != "200" ] && [ "$response" != "503" ]; then
             echo "::error::Inesperado: HTTP $response"
             exit 1
+          fi
+          # Alerta (nao falha) se o banco nao respondeu — indica Supabase pausado
+          # ou secret errado. So checa quando o Space respondeu 200.
+          if [ "$response" = "200" ] && ! grep -q '"db": *true' /tmp/body; then
+            echo "::warning::Space respondeu 200 mas Supabase nao confirmou (db != true). Verificar projeto/secret."
           fi
