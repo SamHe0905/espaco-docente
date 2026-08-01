@@ -1,43 +1,66 @@
 name: Keep HuggingFace Space + Supabase alive
 
-# Pinga o backend a cada 12h. O endpoint /keep-alive:
-#   1. mantem o HF Space quente (free tier dorme apos 48h sem requests)
-#   2. faz uma query no Supabase, contando como atividade (free tier pausa
-#      o projeto apos ~7 dias sem NENHUMA query no banco)
+# Mantem vivos os dois componentes free-tier, mas de forma INDEPENDENTE:
 #
-# Um unico ping resolve os dois. Custo: ~30s/run × 2 runs/dia × 30 dias =
-# 30min/mes (limite gratuito do GitHub Actions: 2000min/mes em repo privado).
+#   1. Backend HF Space: pinga /keep-alive. Se vier 503, RETENTA — cold start
+#      real do bge-m3 resolve em ~2min. Se persistir 503 apos varias tentativas,
+#      FALHA e o GitHub avisa por e-mail (Space provavelmente em RUNTIME_ERROR,
+#      precisa Factory rebuild no painel HF).
+#
+#   2. Supabase: pinga a RPC tocar_keep_alive() DIRETO, sem passar pelo backend.
+#      Roda mesmo se o passo 1 falhar (if: always()). Assim, se o backend cair,
+#      o banco NAO pausa junto. E e uma ESCRITA (nao SELECT) — leitura pura vinha
+#      nao segurando projeto free.
+#
+# Historico: o keep-alive antigo tocava o banco SO via backend e aceitava 503 do
+# Space como "ok". Resultado: o Space ficou em RUNTIME_ERROR ~16 dias e o monitor
+# passou verde o tempo todo, sem avisar. Estes dois passos fecham os dois furos.
+#
+# A anon key (sb_publishable_) e publica por design (acesso protegido por RLS).
 
 on:
   schedule:
-    # Roda as 00:00 e 12:00 UTC (21:00 e 09:00 BRT)
-    - cron: "0 */12 * * *"
-  # permite rodar manualmente pelo botao "Run workflow"
+    - cron: "0 */12 * * *" # 00:00 e 12:00 UTC (21:00 e 09:00 BRT)
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Ping backend keep-alive (HF Space + Supabase)
+      - name: Backend HF Space (retenta cold start, falha se 503 persistir)
         run: |
-          set -e
           URL="https://espacodocente01-api.hf.space/keep-alive"
-          echo "Pinging $URL"
-          # -L segue redirect; -m 90 limita a 90s (acomoda cold start do bge-m3)
-          response=$(curl -sL -m 90 -o /tmp/body -w "%{http_code}" "$URL")
-          echo "HTTP status: $response"
-          echo "Body:"
-          cat /tmp/body
-          echo ""
-          # 200 = no ar. 503 = acordando mas vai voltar; aceitavel.
-          if [ "$response" != "200" ] && [ "$response" != "503" ]; then
-            echo "::error::Inesperado: HTTP $response"
+          ok=""
+          for i in 1 2 3 4 5; do
+            code=$(curl -sL -m 90 -o /tmp/body -w "%{http_code}" "$URL" || echo "000")
+            echo "tentativa $i: HTTP $code"
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            sleep 30
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::Backend nao voltou 200 apos 5 tentativas. Space provavelmente em RUNTIME_ERROR — fazer Factory rebuild no painel HF."
             exit 1
           fi
-          # Alerta (nao falha) se o banco nao respondeu — indica Supabase pausado
-          # ou secret errado. So checa quando o Space respondeu 200.
-          if [ "$response" = "200" ] && ! grep -q '"db": *true' /tmp/body; then
-            echo "::warning::Space respondeu 200 mas Supabase nao confirmou (db != true). Verificar projeto/secret."
+          echo "Body:"; cat /tmp/body; echo ""
+          if ! grep -q '"db": *true' /tmp/body; then
+            echo "::warning::Backend respondeu 200 mas Supabase nao confirmou (db != true). Verificar projeto/secret."
+          fi
+
+      - name: Supabase direto (rede de seguranca, independe do backend)
+        if: always() # roda mesmo se o backend acima falhar
+        env:
+          URL: https://cewdgfmunimpbuntukwh.supabase.co
+          KEY: sb_publishable_0ZoIFBBhrd40UKvbAJaWAQ_12s-Fw8o
+        run: |
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X POST "$URL/rest/v1/rpc/tocar_keep_alive" \
+            -H "apikey: $KEY" \
+            -H "Authorization: Bearer $KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          echo "Supabase RPC respondeu: $codigo"
+          if [ "$codigo" != "200" ]; then
+            echo "::error::Supabase nao respondeu 200 na RPC de keep-alive. Pode estar pausado (restaurar na mao no painel)."
+            exit 1
           fi
